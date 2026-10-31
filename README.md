@@ -1,4 +1,4 @@
-# Building Block Specification
+# Building Blocks Specification
 
 This repository contains a JSON schema for describing the building blocks of user interfaces.
 
