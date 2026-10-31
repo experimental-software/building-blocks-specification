@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/experimental-software/building-blocks-specification/buildingblocks.schema.json",
+  "$id": "https://experimental-software.github.io/building-blocks-specification/schema/buildingblocks_0_1_0.json",
   "title": "Building Blocks Specification",
   "type": "object",
   "required": ["buildingblocks", "info", "components"],
