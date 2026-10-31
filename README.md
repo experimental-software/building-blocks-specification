@@ -5,7 +5,7 @@ This repository contains a JSON schema for describing the building blocks of use
 ## Usage
 
 ```
-https://experimental-software.github.io/building-blocks-specification/schema/buildingblocks_0_1_0.json
+https://experimental-software.github.io/building-blocks-specification/schema/buildingblocks_0_1_1.json
 ```
 
 ## Alternatives
