@@ -1,1 +1,13 @@
-# ui-component-specification
+# UI Component Specification
+
+This repository contains a JSON schema for describing user interface components.
+
+## Usage
+
+TBD
+
+## References
+
+- https://en.wikipedia.org/wiki/Interaction_Flow_Modeling_Language
+- https://en.wikipedia.org/wiki/OpenAPI_Specification
+- https://m3.material.io/
