@@ -10,13 +10,15 @@ The intended use is to create a YAML file that is structured according to the re
 # yaml-language-server: $schema=https://experimental-software.github.io/building-blocks-specification/schema/buildingblocks_0_1_1.json
 buildingblocks: 0.1.1
 info:
-  title: Product Search
+  title: Product Catalog UI Specification
 components:
   - name: Product Catalog
     type: Window
     children:
       - type: Text
-        name: Product Search
+        name: Headline
+        properties:
+          text: Product Catalog
       - type: Input
         name: Product
         properties:
