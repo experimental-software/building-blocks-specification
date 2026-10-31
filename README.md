@@ -4,8 +4,35 @@ This repository contains a JSON schema for describing the building blocks of use
 
 ## Usage
 
-```
-https://experimental-software.github.io/building-blocks-specification/schema/buildingblocks_0_1_1.json
+The intended use is to create a YAML file that is structured according to the referred `buildingblocks` JSON schema:
+
+```yml
+# yaml-language-server: $schema=https://experimental-software.github.io/building-blocks-specification/schema/buildingblocks_0_1_1.json
+buildingblocks: 0.1.1
+info:
+  title: Product Search
+components:
+  - name: Product Catalog
+    type: Window
+    children:
+      - type: Text
+        name: Product Search
+      - type: Input
+        name: Product
+        properties:
+          minLength: 1
+          maxLength: 255
+          placeholder: What is the searched product name?
+          pattern: '[\s\S]*\S[\s\S]*'
+      - type: Button
+        name: Search
+  - name: Search Results
+    type: Alert Dialog
+    children:
+      - type: Text
+        name: Found Article Names
+      - type: Button
+        name: Close
 ```
 
 ## Alternatives
