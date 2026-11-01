@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://experimental-software.github.io/building-blocks-specification/schema/buildingblocks_0_2_0.json",
+  "title": "Building Blocks Specification",
+  "type": "object",
+  "required": ["buildingblocks", "info", "components"],
+  "additionalProperties": true,
+  "properties": {
+    "buildingblocks": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Version of the specification, e.g. 0.2.0"
+    },
+    "info": {
+      "type": "object",
+      "required": ["title"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "minLength": 1 }
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/component" }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["Window", "Alert Dialog", "Text", "Input", "Button"] },
+        "description": { "type": "string" },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/component" }
+        },
+        "properties": { "type": "object" }
+      },
+      "unevaluatedProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "Input" } } },
+          "then": { "properties": { "properties": { "$ref": "#/$defs/inputProperties" } } }
+        },
+        {
+          "if": { "properties": { "type": { "enum": ["Text", "Input", "Button"] } } },
+          "then": { "not": { "required": ["children"] } }
+        }
+      ]
+    },
+    "inputProperties": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minLength": { "type": "integer", "minimum": 0 },
+        "maxLength": { "type": "integer", "minimum": 0 },
+        "placeholder": { "type": "string" },
+        "pattern": { "type": "string", "format": "regex" }
+      }
+    }
+  }
+}
