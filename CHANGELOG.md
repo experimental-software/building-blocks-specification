@@ -1,8 +1,12 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
+All notable changes to this project are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Since this project is experimental and breaking changes are expected regularly. So, [Semantic Versioning](https://semver.org/spec/v2.0.0.html) is not used, yet. Breaking change may be done with patch versions.
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html) is not used, yet. This is the intended meaning of the version number parts:
+
+- Major version: 0, to indicate that the project is experimental.
+- Minor version: Gets incremented with each breaking change.
+- Path version: Gets incremented with each non-breaking structural change.
 
 ## [0.1.1] - 2026-10-31
 
