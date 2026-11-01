@@ -7,8 +7,8 @@ This repository contains a JSON schema for describing the building blocks of use
 The intended use is to create a YAML file that is structured according to the referred `buildingblocks` JSON schema:
 
 ```yml
-# yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_2_0.json
-buildingblocks: 0.2.0
+# yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_1_2.json
+buildingblocks: 0.1.2
 info:
   title: Product Catalog UI Specification
 components:
