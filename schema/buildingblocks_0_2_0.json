@@ -30,7 +30,7 @@
       "required": ["name", "type"],
       "properties": {
         "name": { "type": "string", "minLength": 1 },
-        "type": { "enum": ["Window", "Alert Dialog", "Text", "Input", "Button"] },
+        "type": { "type": "string" },
         "description": { "type": "string" },
         "children": {
           "type": "array",

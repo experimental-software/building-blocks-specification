@@ -12,7 +12,7 @@ All notable changes to this project are documented in this file. The format is b
 
 ### Changed
 
-- **BREAKING:** Components now accept only schema-defined types; added an optional description to components.
+- Added an optional description property to components.
 
 ## [0.1.1] - 2026-10-31
 
