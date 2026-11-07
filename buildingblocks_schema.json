@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://experimental-software.com/buildingblocks_0_1_4.json",
+  "$id": "https://experimental-software.com/buildingblocks_0_1_5.json",
   "title": "Building Blocks Specification",
   "type": "object",
   "required": [
@@ -46,6 +46,10 @@
         "type"
       ],
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifier of the component."
+        },
         "name": {
           "type": "string",
           "minLength": 1,
