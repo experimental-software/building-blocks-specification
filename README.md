@@ -6,6 +6,8 @@ This repository contains a JSON schema for describing the building blocks of use
 
 The intended use is to create a YAML file that is structured according to the referred `buildingblocks` JSON schema:
 
+The schema includes property descriptions that compatible editors, such as VS Code with a YAML language server, can show as hover help and in completion suggestions.
+
 ```yml
 # yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_1_2.json
 buildingblocks: 0.1.2
