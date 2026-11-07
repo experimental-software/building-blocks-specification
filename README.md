@@ -1,12 +1,10 @@
 # Building Blocks Specification [![Stability: Experimental](https://masterminds.github.io/stability/experimental.svg)](https://masterminds.github.io/stability/experimental.html)
 
-This repository contains a JSON schema for describing the building blocks of user interfaces.
+This repository contains a JSON schema for describing the building blocks of user interfaces. The schema includes property descriptions that compatible editors, such as VS Code with a YAML language server, can show as hover help and in completion suggestions.
 
 ## Usage
 
 The intended use is to create a YAML file that is structured according to the referred `buildingblocks` JSON schema:
-
-The schema includes property descriptions that compatible editors, such as VS Code with a YAML language server, can show as hover help and in completion suggestions.
 
 ```yml
 # yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_1_3.json
