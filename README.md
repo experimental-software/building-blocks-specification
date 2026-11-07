@@ -7,8 +7,8 @@ This repository contains a JSON schema for describing the building blocks of use
 The intended use is to create a YAML file that is structured according to the referred `buildingblocks` JSON schema:
 
 ```yml
-# yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_1_3.json
-buildingblocks: 0.1.3
+# yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_1_4.json
+buildingblocks: 0.1.4
 info:
   title: Product Catalog UI Specification
 components:
@@ -55,6 +55,26 @@ components:
   type: Input
   properties:
     maxLength: 255
+
+- name: Price Filter
+  type: Input
+  properties:
+    leadingDecorator: "$"
+    minimumValue: 0
+    maximumValue: 1000000
+    minimumFractionDigits: 2
+    maximumFractionDigits: 2
+    locale: en-US
+
+- name: Price Filter
+  type: Input
+  properties:
+    trailingDecorator: "€"
+    minimumValue: 0
+    maximumValue: 1000000
+    minimumFractionDigits: 2
+    maximumFractionDigits: 2
+    locale: de-DE
 ```
 
 ## Alternatives

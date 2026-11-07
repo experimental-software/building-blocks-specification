@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://experimental-software.com/buildingblocks_0_1_3.json",
+  "$id": "https://experimental-software.com/buildingblocks_0_1_4.json",
   "title": "Building Blocks Specification",
   "type": "object",
   "required": [
@@ -133,6 +133,36 @@
           "type": "string",
           "format": "regex",
           "description": "Regular expression that the input value needs to match."
+        },
+        "leadingDecorator": {
+          "type": "string",
+          "description": "Text displayed before the input value."
+        },
+        "trailingDecorator": {
+          "type": "string",
+          "description": "Text displayed after the input value."
+        },
+        "minimumValue": {
+          "type": "number",
+          "description": "Minimum numeric value accepted by the input."
+        },
+        "maximumValue": {
+          "type": "number",
+          "description": "Maximum numeric value accepted by the input."
+        },
+        "minimumFractionDigits": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum number of digits displayed after the decimal separator."
+        },
+        "maximumFractionDigits": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum number of digits displayed after the decimal separator."
+        },
+        "locale": {
+          "type": "string",
+          "description": "Locale used to format the input value."
         }
       }
     }

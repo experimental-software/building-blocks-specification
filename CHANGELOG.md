@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file. The format is b
 - Minor version: Gets incremented with each breaking change.
 - Path version: Gets incremented with each non-breaking structural change.
 
+## [0.1.4] - 2026-11-07
+
+### Added
+
+- Optional input properties for currency formatting and numeric bounds.
+
 ## [0.1.3] - 2026-11-07
 
 ### Changed
