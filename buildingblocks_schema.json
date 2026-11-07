@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://experimental-software.com/buildingblocks_0_1_4.json",
+  "$id": "https://experimental-software.com/buildingblocks_0_1_5.json",
   "title": "Building Blocks Specification",
   "description": "Allows to declare visual details for View Elements of IFML specifications. Out of scope are Events and Actions.",
   "type": "object",
@@ -47,6 +47,10 @@
         "type"
       ],
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifier of the component."
+        },
         "name": {
           "type": "string",
           "minLength": 1,
