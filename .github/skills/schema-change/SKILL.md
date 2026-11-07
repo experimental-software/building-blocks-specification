@@ -10,7 +10,7 @@ Scripts live in `.github/skills/schema-change/scripts/`. Run them instead of doi
 ## Steps
 
 1. **Classify** each change: `addition` (new optional property, loosened constraint) or `breaking` (remove/rename property, type change, newly required, tightened constraint). Breaking → minor bump, addition → patch bump; the higher one wins.
-2. **Copy**: `scripts/copy-schema.sh <class>...` copies the latest `schema/buildingblocks_X_Y_Z.json` to the new version, updates `$id`/version strings, and prints `<old> <new>`. Edit **only the new copy**, never older schemas. (`latest-version.sh` / `next-version.sh` are used internally.)
+2. **Update schema**: `scripts/update-schema-id.sh <class>...` updates the `$id` in the root `buildingblocks_schema.json` to the next version and prints `<old> <new>`. Edit the root schema for the structural change; do not create or edit versioned schema copies. (`latest-version.sh` / `next-version.sh` are used internally.)
 3. **README**: `scripts/update-readme.sh <old> <new>`, then edit the usage example by hand for affected properties.
 4. **Changelog**: `scripts/add-changelog.sh <new> <Added|Changed|Removed|Fixed> <breaking|non-breaking> "<description>"` (breaking entries get a `**BREAKING:**` prefix). Run once per section needed; edit the file by hand if merging sections.
-5. **Validate**: `scripts/validate.sh <old> <new>` must print `OK`.
+5. **Validate**: `scripts/validate.sh <old> <new>` must print `OK` for the root schema and its README/changelog references.
