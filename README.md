@@ -39,6 +39,24 @@ components:
         name: Close
 ```
 
+## Atoms
+
+### Buttons
+
+```yml
+- name: Add item
+  type: Button
+```
+
+### Inputs
+
+```yml
+- name: Name Filter
+  type: Input
+  properties:
+    maxLength: 255
+```
+
 ## Alternatives
 
 - https://github.com/gcsebas99/web-ui-component-spec-mcp
