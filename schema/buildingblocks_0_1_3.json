@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://experimental-software.com/buildingblocks_0_1_3.json",
+  "title": "Building Blocks Specification",
+  "type": "object",
+  "required": [
+    "buildingblocks",
+    "info",
+    "components"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "buildingblocks": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Version of the Building Blocks Specification schema."
+    },
+    "info": {
+      "type": "object",
+      "description": "Information about this UI specification.",
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Title of the UI specification."
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "description": "Top-level components of the user interface.",
+      "items": {
+        "$ref": "#/$defs/component"
+      }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": [
+        "name",
+        "type"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the component."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of the component, such as Input, Text, or Button."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the component and its purpose."
+        },
+        "children": {
+          "type": "array",
+          "description": "Components contained within this component.",
+          "items": {
+            "$ref": "#/$defs/component"
+          }
+        },
+        "properties": {
+          "type": "object",
+          "description": "Properties specific to the component type."
+        }
+      },
+      "unevaluatedProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "Input"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "properties": {
+                "$ref": "#/$defs/inputProperties"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "Text",
+                  "Input",
+                  "Button"
+                ]
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "children"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "inputProperties": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minLength": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum length of the input value."
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum length of the input value."
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "Hint text shown when the input is empty."
+        },
+        "pattern": {
+          "type": "string",
+          "format": "regex",
+          "description": "Regular expression that the input value needs to match."
+        }
+      }
+    }
+  }
+}
