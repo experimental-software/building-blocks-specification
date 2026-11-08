@@ -12,9 +12,9 @@ buildingblocks: 0.1.5
 info:
   title: Product Catalog UI Specification
 components:
-  - name: Product Catalog
+  - type: Window
+    name: Product Catalog
     id: product-catalog
-    type: Window
     description: Browse and search the product catalog.
     children:
       - type: Text
@@ -31,8 +31,8 @@ components:
           pattern: '[\s\S]*\S[\s\S]*'
       - type: Button
         name: Search
-  - name: Search Results
-    type: Alert Dialog
+  - type: Alert Dialog
+    name: Search Results
     children:
       - type: Text
         name: Found Article Names
