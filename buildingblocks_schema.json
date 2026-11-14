@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://experimental-software.com/buildingblocks_0_1_5.json",
+  "$id": "https://experimental-software.com/buildingblocks_0_1_6-SNAPSHOT.json",
   "title": "Building Blocks Specification",
   "description": "Allows to declare visual details for View Elements of IFML specifications. Out of scope are Events and Actions.",
   "type": "object",
@@ -133,6 +133,14 @@
         "placeholder": {
           "type": "string",
           "description": "Hint text shown when the input is empty."
+        },
+        "readonly": {
+          "type": "boolean",
+          "description": "Flag to disallow editing the input field."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Flag to indicate the parent form is invalid if the input has not been provided."
         },
         "pattern": {
           "type": "string",
