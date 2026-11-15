@@ -19,9 +19,10 @@ optional arguments:
   -b    Mark the entry as breaking (prefixes it with "**BREAKING:**").
   -h    Show this help message and exit.
 
-Adds the entry to the "## [Unreleased]" section of CHANGELOG.md and, unless the
-schema \$id already ends in "-SNAPSHOT.json", bumps its patch version and adds
-that suffix. No release, tag or branch is created.
+Adds the entry to the first section of CHANGELOG.md, creating "## [Unreleased]"
+if needed, and, unless the schema \$id already ends in "-SNAPSHOT.json", bumps
+its patch version and adds that suffix. README.md is not changed. No release,
+tag or branch is created.
 
 dependencies:
   - jq
@@ -112,13 +113,30 @@ add_changelog_entry() {
   local text=$DESCRIPTION
   [[ "${BREAKING}" == "true" ]] && text="**BREAKING:** ${text}"
 
-  if ! grep -q '^## \[Unreleased\]' "${CHANGELOG_FILE}"; then
-    echo "ERROR: no '## [Unreleased]' section in ${CHANGELOG_FILE}" >&2
+  if ! awk '
+    /^## / {
+      if ($0 == "## [Unreleased]" && seen_section) exit 1
+      seen_section = 1
+    }
+  ' "${CHANGELOG_FILE}"; then
+    echo "ERROR: '## [Unreleased]' must be the first section in ${CHANGELOG_FILE}" >&2
     exit 1
   fi
 
   local tmp
   tmp=$(mktemp)
+  if ! grep -Fxq '## [Unreleased]' "${CHANGELOG_FILE}"; then
+    awk '
+      /^## / && !inserted {
+        print "## [Unreleased]"; print ""; inserted = 1
+      }
+      { print }
+      END {
+        if (!inserted) { print ""; print "## [Unreleased]"; print "" }
+      }
+    ' "${CHANGELOG_FILE}" > "${tmp}"
+    cat "${tmp}" > "${CHANGELOG_FILE}"
+  fi
   # Appends to an existing category of the Unreleased section or creates it.
   awk -v cat="### ${CATEGORY}" -v entry="- ${text}" '
     function flush_pending(   i) {
@@ -132,7 +150,7 @@ add_changelog_entry() {
         flush_pending()
         if (!done) { print cat; print ""; print entry; print ""; done = 1 }
       }
-      in_unreleased = ($0 ~ /^## \[Unreleased\]/)
+      in_unreleased = ($0 == "## [Unreleased]")
       print; next
     }
     in_unreleased && /^### / {
