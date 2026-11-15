@@ -8,6 +8,13 @@ All notable changes to this project are documented in this file. The format is b
 - Minor version: Gets incremented with each breaking change.
 - Path version: Gets incremented with each non-breaking structural change.
 
+## [Unreleased]
+
+### Added
+
+- Optional readonly and required boolean properties for input components.
+- SplitButton view component with persistent selection and labeled options.
+
 ## [0.1.5] - 2026-11-07
 
 ### Added
@@ -25,13 +32,6 @@ All notable changes to this project are documented in this file. The format is b
 ### Changed
 
 - Added editor help text for schema properties.
-
-## [Unreleased]
-
-### Added
-
-- Optional readonly and required boolean properties for input components.
-- SplitButton view component with persistent selection and labeled options.
 
 ## [0.1.2] - 2026-11-01
 
