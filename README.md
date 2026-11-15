@@ -49,6 +49,22 @@ components:
   type: Button
 ```
 
+### Split Buttons
+
+The first option is the default. Set `persistent` to retain the selected
+option as the preselected option.
+
+```yml
+- name: Save
+  type: SplitButton
+  properties:
+    persistent: true
+    options:
+      - textLabel: Save
+        icon: save
+      - textLabel: Save as
+```
+
 ### Inputs
 
 ```yml

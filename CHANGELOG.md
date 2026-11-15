@@ -31,6 +31,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Added
 
 - Optional readonly and required boolean properties for input components.
+- SplitButton view component with persistent selection and labeled options.
 
 ## [0.1.2] - 2026-11-01
 
