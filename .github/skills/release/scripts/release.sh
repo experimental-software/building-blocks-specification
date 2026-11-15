@@ -17,7 +17,9 @@ optional arguments:
   -h    Show this help message and exit.
 
 Updates the \$id in buildingblocks_schema.json and all versioned examples in
-README.md to the release version. No tag, release or branch is created.
+README.md to the release version, and renames the first "## [Unreleased]"
+section in CHANGELOG.md to the dated release version. No tag, release or branch
+is created.
 
 dependencies:
   - jq
@@ -61,6 +63,7 @@ fi
 ROOT=${RELEASE_ROOT:-$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel)}
 SCHEMA_FILE="${ROOT}/buildingblocks_schema.json"
 README_FILE="${ROOT}/README.md"
+CHANGELOG_FILE="${ROOT}/CHANGELOG.md"
 
 determine_version() {
   [[ -n "${VERSION}" ]] && return
@@ -97,10 +100,39 @@ update_readme() {
   echo "README examples updated to ${VERSION}"
 }
 
+validate_changelog() {
+  if ! awk -v version="${VERSION}" '
+    /^## / {
+      if (!seen && $0 != "## [Unreleased]") exit 1
+      seen = 1
+      if ($0 == "## [Unreleased]" && ++unreleased > 1) exit 1
+      if (index($0, "## [" version "]") == 1) exit 1
+    }
+    END { if (!seen) exit 1 }
+  ' "${CHANGELOG_FILE}"; then
+    echo "ERROR: ${CHANGELOG_FILE} must start with an Unreleased section and must not already contain version ${VERSION}." >&2
+    exit 1
+  fi
+}
+
+release_changelog() {
+  local tmp
+  tmp=$(mktemp)
+  awk -v version="${VERSION}" -v date="$(date -u +%F)" '
+    $0 == "## [Unreleased]" { print "## [" version "] - " date; next }
+    { print }
+  ' "${CHANGELOG_FILE}" > "${tmp}"
+  cat "${tmp}" > "${CHANGELOG_FILE}"
+  rm -f "${tmp}"
+  echo "Changelog: released ${VERSION}"
+}
+
 # ==============================================================================
 # MAIN SCRIPT EXECUTION
 # ==============================================================================
 
 determine_version
+validate_changelog
 update_schema_id
 update_readme
+release_changelog
