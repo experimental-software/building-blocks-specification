@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_1_6.json
+buildingblocks: "0.1.6"
+info:
+  title: Patient observations
+components:
+  - type: SplitButton
+    name: Record observation
+    description: Opens a form for the selected observation type.
+    properties:
+      persistent: false
+      options:
+        - textLabel: Record blood pressure
+        - textLabel: Record temperature
+        - textLabel: Record pulse
+        - textLabel: Record oxygen saturation

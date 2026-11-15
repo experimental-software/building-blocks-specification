@@ -40,6 +40,11 @@ components:
         name: Close
 ```
 
+## Examples
+
+- Button
+  - [SplitButton](./examples/buttons-splitbutton-record-observation.yml)
+
 ## Alternatives
 
 - https://github.com/gcsebas99/web-ui-component-spec-mcp
