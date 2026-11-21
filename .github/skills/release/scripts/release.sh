@@ -23,6 +23,8 @@ release or branch is created.
 
 dependencies:
   - jq
+  - ruby
+  - check-jsonschema (optional; enables full schema and example validation)
 EOF
 )
 
@@ -113,6 +115,48 @@ update_examples() {
   echo "Examples updated to ${VERSION}"
 }
 
+validate_schema_and_examples() {
+  local -a example_files=()
+  mapfile -d '' -t example_files < <(find "${EXAMPLES_DIR}" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0)
+
+  if command -v check-jsonschema >/dev/null 2>&1; then
+    check-jsonschema --schemafile "${SCHEMA_FILE}" "${example_files[@]}" 2>/dev/null
+  else
+    ruby -e 'require "json"; require "yaml"; JSON.parse(File.read(ARGV.shift)); ARGV.each { |file| YAML.load_file(file, aliases: true) }' "${SCHEMA_FILE}" "${example_files[@]}"
+  fi
+}
+
+migrate_examples_if_needed() {
+  local migration_script="${SCRIPT_DIR}/migrate-example-properties.rb"
+  if ruby "${migration_script}" check "${CHANGELOG_FILE}" "${EXAMPLES_DIR}" >/dev/null 2>&1; then
+    return
+  fi
+
+  echo "Examples do not match the changelog migration; applying property migrations."
+  ruby "${migration_script}" migrate "${CHANGELOG_FILE}" "${EXAMPLES_DIR}"
+}
+
+validate_and_migrate_examples() {
+  if validate_schema_and_examples; then
+    migration_script="${SCRIPT_DIR}/migrate-example-properties.rb"
+    if ! ruby "${migration_script}" check "${CHANGELOG_FILE}" "${EXAMPLES_DIR}" >/dev/null 2>&1; then
+      migrate_examples_if_needed
+      validate_schema_and_examples || {
+        echo "ERROR: schema validation still fails after applying changelog migrations." >&2
+        exit 1
+      }
+    fi
+    echo "Schema and examples validated"
+  else
+    migrate_examples_if_needed
+    validate_schema_and_examples || {
+      echo "ERROR: schema validation still fails after applying changelog migrations." >&2
+      exit 1
+    }
+    echo "Schema and examples validated"
+  fi
+}
+
 validate_changelog() {
   if ! awk -v version="${VERSION}" '
     /^## / {
@@ -149,4 +193,5 @@ validate_changelog
 update_schema_id
 update_readme
 update_examples
+validate_and_migrate_examples
 release_changelog
