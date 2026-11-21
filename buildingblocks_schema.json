@@ -13,7 +13,7 @@
   "properties": {
     "buildingblocks": {
       "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-SNAPSHOT)?$",
       "description": "Version of the Building Blocks Specification schema."
     },
     "info": {
