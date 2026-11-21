@@ -15,7 +15,7 @@ components:
       - name: Search products
         description: Customers find bikes and accessories by name.
         tags:
-          - "@catalog"
+          - catalog
         children:
           - background:
               name: Catalog
@@ -29,7 +29,7 @@ components:
           - scenario:
               name: Find a product by name
               tags:
-                - "@smoke"
+                - smoke
               steps:
                 - When the customer searches for "Mountain"
                 - Then the result list contains "Mountain-200"
@@ -38,15 +38,12 @@ components:
               name: Search by category
               steps:
                 - When the customer searches for "<term>"
-                - Then the result list contains <count> products
-              examples:
-                - name: Known categories
-                  tags:
-                    - "@regression"
-                  tableHeader: [term, count]
-                  tableBody:
-                    - [Bikes, "2"]
-                    - [Accessories, "1"]
+                - |-
+                  Then the result list contains <count> products
+                    Examples: Known categories
+                      | term        | count |
+                      | Bikes       | 2     |
+                      | Accessories | 1     |
   - type: Form
     name: Checkout
     description: Order submission form.

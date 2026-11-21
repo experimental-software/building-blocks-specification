@@ -145,13 +145,7 @@
     },
     "tags": {
       "type": "array",
-      "description": "Tags including the leading @, e.g. \"@smoke\".",
-      "items": {
-        "type": "string"
-      }
-    },
-    "tableRow": {
-      "type": "array",
+      "description": "Tags without the leading @, e.g. \"smoke\".",
       "items": {
         "type": "string"
       }
@@ -288,7 +282,7 @@
     },
     "scenario": {
       "type": "object",
-      "description": "A scenario with a non-empty examples list is a scenario outline.",
+      "description": "A Gherkin scenario. Scenario outlines are expressed by including the Examples keyword and table as a multi-line string in the last step.",
       "required": [
         "name",
         "steps"
@@ -309,47 +303,13 @@
           "items": {
             "$ref": "#/$defs/step"
           }
-        },
-        "examples": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/examples"
-          }
         }
       }
     },
     "step": {
       "type": "string",
       "minLength": 1,
-      "description": "Step text as written, including the leading keyword (Given, When, Then, And, But, *). May be multi-line to include a doc string or data table."
-    },
-    "examples": {
-      "type": "object",
-      "required": [
-        "tableHeader",
-        "tableBody"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "tags": {
-          "$ref": "#/$defs/tags"
-        },
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "tableHeader": {
-          "$ref": "#/$defs/tableRow"
-        },
-        "tableBody": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/tableRow"
-          }
-        }
-      }
+      "description": "Step text as written, including the leading keyword (Given, When, Then, And, But, *). May be multi-line to include a doc string, data table or examples table."
     },
     "splitButtonProperties": {
       "type": "object",
