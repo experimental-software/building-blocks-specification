@@ -319,40 +319,9 @@
       }
     },
     "step": {
-      "type": "object",
-      "required": [
-        "text"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "text": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Step text as written, including the leading keyword (Given, When, Then, And, But, *)."
-        },
-        "docString": {
-          "type": "object",
-          "required": [
-            "content"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "content": {
-              "type": "string"
-            },
-            "mediaType": {
-              "type": "string"
-            }
-          }
-        },
-        "dataTable": {
-          "type": "array",
-          "description": "Rows, each a list of cell strings.",
-          "items": {
-            "$ref": "#/$defs/tableRow"
-          }
-        }
-      }
+      "type": "string",
+      "minLength": 1,
+      "description": "Step text as written, including the leading keyword (Given, When, Then, And, But, *). May be multi-line to include a doc string or data table."
     },
     "examples": {
       "type": "object",
