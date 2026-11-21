@@ -5,6 +5,9 @@ ROOT=$(git rev-parse --show-toplevel)
 TEST_ROOT=$(mktemp -d)
 trap 'rm -rf -- "${TEST_ROOT}"' EXIT
 cp "${ROOT}/buildingblocks_schema.json" "${ROOT}/README.md" "${TEST_ROOT}/"
+mkdir "${TEST_ROOT}/examples"
+printf '# yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_1_6.json\nbuildingblocks: "0.1.6"\n' > "${TEST_ROOT}/examples/versioned.yml"
+printf '# yaml-language-server: $schema=https://raw.githubusercontent.com/experimental-software/building-blocks-specification/refs/heads/main/buildingblocks_schema.json\nbuildingblocks: "0.1.7-SNAPSHOT"\n' > "${TEST_ROOT}/examples/snapshot.yml"
 
 cat > "${TEST_ROOT}/CHANGELOG.md" <<'EOF'
 # Changelog
@@ -56,6 +59,10 @@ grep -Fxq -- '- First change.' "${TEST_ROOT}/CHANGELOG.md"
 release
 grep -Fxq "## [0.1.7] - $(date -u +%F)" "${TEST_ROOT}/CHANGELOG.md"
 grep -Fq 'buildingblocks_0_1_7.json' "${TEST_ROOT}/README.md"
+grep -Fxq 'buildingblocks: "0.1.7"' "${TEST_ROOT}/examples/versioned.yml"
+grep -Fxq 'buildingblocks: "0.1.7"' "${TEST_ROOT}/examples/snapshot.yml"
+grep -Fq 'buildingblocks_0_1_7.json' "${TEST_ROOT}/examples/versioned.yml"
+grep -Fq 'buildingblocks_0_1_7.json' "${TEST_ROOT}/examples/snapshot.yml"
 if release -v 0.1.7; then
   echo "ERROR: release without an Unreleased section succeeded" >&2
   exit 1

@@ -17,9 +17,9 @@ optional arguments:
   -h    Show this help message and exit.
 
 Updates the \$id in buildingblocks_schema.json and all versioned examples in
-README.md to the release version, and renames the first "## [Unreleased]"
-section in CHANGELOG.md to the dated release version. No tag, release or branch
-is created.
+README.md and examples/ to the release version, and renames the first
+"## [Unreleased]" section in CHANGELOG.md to the dated release version. No tag,
+release or branch is created.
 
 dependencies:
   - jq
@@ -64,6 +64,7 @@ ROOT=${RELEASE_ROOT:-$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel)}
 SCHEMA_FILE="${ROOT}/buildingblocks_schema.json"
 README_FILE="${ROOT}/README.md"
 CHANGELOG_FILE="${ROOT}/CHANGELOG.md"
+EXAMPLES_DIR="${ROOT}/examples"
 
 determine_version() {
   [[ -n "${VERSION}" ]] && return
@@ -98,6 +99,18 @@ update_readme() {
     -e "s/^(buildingblocks: )[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?/\1${VERSION}/" \
     "${README_FILE}"
   echo "README examples updated to ${VERSION}"
+}
+
+update_examples() {
+  local file
+  while IFS= read -r -d '' file; do
+    sed -i -E \
+      -e "s/(buildingblocks_)[0-9]+_[0-9]+_[0-9]+(-SNAPSHOT)?\.json/\1${VERSION//./_}.json/g" \
+      -e "s|(https://raw\\.githubusercontent\\.com/experimental-software/building-blocks-specification/refs/heads/main/)buildingblocks_schema\\.json|https://experimental-software.com/buildingblocks_${VERSION//./_}.json|g" \
+      -e "s/^buildingblocks: \"?[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?\"?/buildingblocks: \"${VERSION}\"/" \
+      "${file}"
+  done < <(find "${EXAMPLES_DIR}" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0)
+  echo "Examples updated to ${VERSION}"
 }
 
 validate_changelog() {
@@ -135,4 +148,5 @@ determine_version
 validate_changelog
 update_schema_id
 update_readme
+update_examples
 release_changelog
