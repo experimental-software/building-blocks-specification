@@ -372,6 +372,11 @@
           "type": "boolean",
           "description": "Flag to disallow editing the input field."
         },
+        "clearIcon": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to show an icon inside the input field that clears the entered text when tapped."
+        },
         "required": {
           "type": "boolean",
           "description": "Flag to indicate the parent form is invalid if the input has not been provided."
