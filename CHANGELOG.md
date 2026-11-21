@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file. The format is b
 - Minor version: Gets incremented with each breaking change.
 - Path version: Gets incremented with each non-breaking structural change.
 
+## [Unreleased]
+
+### Added
+
+- Optional `features` property on all components for Gherkin features (with rules, backgrounds, scenarios, outlines, tags, doc strings and data tables), plus `examples/gherkin.yml`.
+
 ## [0.1.6] - 2026-11-15
 
 ### Added

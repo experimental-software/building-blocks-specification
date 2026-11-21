@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_1_6.json
+buildingblocks: "0.1.6"
+info:
+  title: Adventure Works Gherkin features
+components:
+  - type: Form
+    name: Product search
+    description: Search form of the Adventure Works product catalog.
+    children:
+      - type: Input
+        name: Search term
+      - type: Button
+        name: Search
+    features:
+      - name: Search products
+        description: Customers find bikes and accessories by name.
+        tags:
+          - "@catalog"
+        children:
+          - background:
+              name: Catalog
+              steps:
+                - text: Given the following products exist
+                  dataTable:
+                    - [Name, Category, Price]
+                    - [Mountain-200, Bikes, "2294.99"]
+                    - [Road-150, Bikes, "3578.27"]
+                    - [Water Bottle, Accessories, "4.99"]
+          - scenario:
+              name: Find a product by name
+              tags:
+                - "@smoke"
+              steps:
+                - text: When the customer searches for "Mountain"
+                - text: Then the result list contains "Mountain-200"
+                - text: And the result list does not contain "Road-150"
+          - scenario:
+              name: Search by category
+              steps:
+                - text: When the customer searches for "<term>"
+                - text: Then the result list contains <count> products
+              examples:
+                - name: Known categories
+                  tags:
+                    - "@regression"
+                  tableHeader: [term, count]
+                  tableBody:
+                    - [Bikes, "2"]
+                    - [Accessories, "1"]
+  - type: Form
+    name: Checkout
+    description: Order submission form.
+    features:
+      - name: Discounts
+        language: en
+        children:
+          - rule:
+              name: Orders of 10 or more items get a bulk discount
+              children:
+                - background:
+                    steps:
+                      - text: Given a cart with a "Water Bottle" priced at 4.99
+                - scenario:
+                    name: Bulk discount applies
+                    steps:
+                      - text: When the customer sets the quantity to 10
+                      - text: Then the line total is 44.91
+                - scenario:
+                    name: No discount for small orders
+                    steps:
+                      - text: When the customer sets the quantity to 5
+                      - text: Then the line total is 24.95
+          - scenario:
+              name: Order confirmation email
+              steps:
+                - text: When the customer submits the order
+                - text: Then the confirmation email body is
+                  docString:
+                    mediaType: text
+                    content: |
+                      Thank you for your order at Adventure Works.
+                      Your order will ship within 3 business days.
