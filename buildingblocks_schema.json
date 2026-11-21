@@ -350,6 +350,10 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "label": {
+          "type": "string",
+          "description": "Caption for the input field."
+        },
         "minLength": {
           "type": "integer",
           "minimum": 0,

@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file. The format is b
 ### Added
 
 - Optional `features` property on all components for Gherkin features (with rules, backgrounds, scenarios and tags without the leading `@`; steps are plain strings, multi-line for doc strings, and data tables; an examples table is a separate last step).
+- Optional string label property for input components.
 
 ## [0.1.6] - 2026-11-15
 
