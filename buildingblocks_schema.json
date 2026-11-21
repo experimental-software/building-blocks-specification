@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://experimental-software.com/buildingblocks_0_1_6.json",
+  "$id": "https://experimental-software.com/buildingblocks_0_1_7-SNAPSHOT.json",
   "title": "Building Blocks Specification",
   "description": "Allows to declare visual details for View Elements of IFML specifications. Out of scope are Events and Actions.",
   "type": "object",
@@ -13,7 +13,7 @@
   "properties": {
     "buildingblocks": {
       "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-SNAPSHOT)?$",
       "description": "Version of the Building Blocks Specification schema."
     },
     "info": {
@@ -74,6 +74,13 @@
         "properties": {
           "type": "object",
           "description": "Properties specific to the component type."
+        },
+        "features": {
+          "type": "array",
+          "description": "Gherkin features describing the behavior of the component.",
+          "items": {
+            "$ref": "#/$defs/feature"
+          }
         }
       },
       "unevaluatedProperties": false,
@@ -135,6 +142,214 @@
           }
         }
       ]
+    },
+    "tags": {
+      "type": "array",
+      "description": "Tags including the leading @, e.g. \"@smoke\".",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tableRow": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "feature": {
+      "type": "object",
+      "description": "Gherkin feature. Structural keywords are derived from the language and not stored.",
+      "required": [
+        "name",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "Gherkin language code, e.g. \"de\". Defaults to English."
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "children": {
+          "type": "array",
+          "description": "Each item contains exactly one of rule, background, scenario.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "required": [
+                  "rule"
+                ]
+              },
+              {
+                "required": [
+                  "background"
+                ]
+              },
+              {
+                "required": [
+                  "scenario"
+                ]
+              }
+            ],
+            "properties": {
+              "rule": {
+                "$ref": "#/$defs/rule"
+              },
+              "background": {
+                "$ref": "#/$defs/background"
+              },
+              "scenario": {
+                "$ref": "#/$defs/scenario"
+              }
+            }
+          }
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "required": [
+        "name",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "children": {
+          "type": "array",
+          "description": "Each item contains exactly one of background, scenario.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "required": [
+                  "background"
+                ]
+              },
+              {
+                "required": [
+                  "scenario"
+                ]
+              }
+            ],
+            "properties": {
+              "background": {
+                "$ref": "#/$defs/background"
+              },
+              "scenario": {
+                "$ref": "#/$defs/scenario"
+              }
+            }
+          }
+        }
+      }
+    },
+    "background": {
+      "type": "object",
+      "required": [
+        "steps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "description": "A scenario with a non-empty examples list is a scenario outline.",
+      "required": [
+        "name",
+        "steps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/examples"
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Step text as written, including the leading keyword (Given, When, Then, And, But, *). May be multi-line to include a doc string or data table."
+    },
+    "examples": {
+      "type": "object",
+      "required": [
+        "tableHeader",
+        "tableBody"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "tableHeader": {
+          "$ref": "#/$defs/tableRow"
+        },
+        "tableBody": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tableRow"
+          }
+        }
+      }
     },
     "splitButtonProperties": {
       "type": "object",
