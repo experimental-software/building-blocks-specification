@@ -18,5 +18,7 @@ Do not include unreleased changes in `README.md`; its examples describe the late
 
 ## Examples
 
+Changes to files in `examples/` are out of scope for the changelog; do not add changelog entries for them.
+
 3. Every new file in `examples/` must start with the line `# yaml-language-server: $schema=https://raw.githubusercontent.com/experimental-software/building-blocks-specification/refs/heads/main/buildingblocks_schema.json` and set `buildingblocks:` to the version of the schema `$id`, including the `-SNAPSHOT` suffix if present (e.g. `"0.1.7-SNAPSHOT"` for `buildingblocks_0_1_7-SNAPSHOT.json`; the schema's `buildingblocks` pattern allows this suffix). Use this pattern only for new examples.
 4. Validate the schema and all examples, e.g. `check-jsonschema --schemafile buildingblocks_schema.json examples/*.yml`.
