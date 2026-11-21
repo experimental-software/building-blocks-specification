@@ -282,7 +282,7 @@
     },
     "scenario": {
       "type": "object",
-      "description": "A Gherkin scenario. Scenario outlines are expressed by including the Examples keyword and table as a multi-line string in the last step.",
+      "description": "A Gherkin scenario. Scenario outlines are expressed by adding the Examples keyword and table as a separate multi-line last step.",
       "required": [
         "name",
         "steps"
@@ -309,7 +309,7 @@
     "step": {
       "type": "string",
       "minLength": 1,
-      "description": "Step text as written, including the leading keyword (Given, When, Then, And, But, *). May be multi-line to include a doc string, data table or examples table."
+      "description": "Step text as written, including the leading keyword (Given, When, Then, And, But, *). May be multi-line to include a doc string, or data table. An examples table is a separate last step."
     },
     "splitButtonProperties": {
       "type": "object",
