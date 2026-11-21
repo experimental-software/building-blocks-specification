@@ -15,3 +15,8 @@ Do **not** create or publish a release, tag or release branch. Releases are hand
    - if the schema `$id` does not yet end in `-SNAPSHOT.json`, increments its patch version and appends the suffix (e.g. `buildingblocks_0_1_5.json` → `buildingblocks_0_1_6-SNAPSHOT.json`); otherwise leaves it unchanged.
 
 Do not include unreleased changes in `README.md`; its examples describe the latest release.
+
+## Examples
+
+3. Every file in `examples/` must start with the line `# yaml-language-server: $schema=https://raw.githubusercontent.com/experimental-software/building-blocks-specification/refs/heads/main/buildingblocks_schema.json` and set `buildingblocks:` to the version of the schema `$id` without the `-SNAPSHOT` suffix (e.g. `"0.1.7"` for `buildingblocks_0_1_7-SNAPSHOT.json`). Update existing examples to the new version after running the script, and use this pattern for new examples.
+4. Validate the schema and all examples, e.g. `check-jsonschema --schemafile buildingblocks_schema.json examples/*.yml`.
