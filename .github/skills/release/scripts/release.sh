@@ -17,12 +17,14 @@ optional arguments:
   -h    Show this help message and exit.
 
 Updates the \$id in buildingblocks_schema.json and all versioned examples in
-README.md to the release version, and renames the first "## [Unreleased]"
-section in CHANGELOG.md to the dated release version. No tag, release or branch
-is created.
+README.md and examples/ to the release version, and renames the first
+"## [Unreleased]" section in CHANGELOG.md to the dated release version. No tag,
+release or branch is created.
 
 dependencies:
   - jq
+  - ruby
+  - check-jsonschema (optional; enables full schema and example validation)
 EOF
 )
 
@@ -64,6 +66,7 @@ ROOT=${RELEASE_ROOT:-$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel)}
 SCHEMA_FILE="${ROOT}/buildingblocks_schema.json"
 README_FILE="${ROOT}/README.md"
 CHANGELOG_FILE="${ROOT}/CHANGELOG.md"
+EXAMPLES_DIR="${ROOT}/examples"
 
 determine_version() {
   [[ -n "${VERSION}" ]] && return
@@ -98,6 +101,60 @@ update_readme() {
     -e "s/^(buildingblocks: )[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?/\1${VERSION}/" \
     "${README_FILE}"
   echo "README examples updated to ${VERSION}"
+}
+
+update_examples() {
+  local file
+  while IFS= read -r -d '' file; do
+    sed -i -E \
+      -e "s/(buildingblocks_)[0-9]+_[0-9]+_[0-9]+(-SNAPSHOT)?\.json/\1${VERSION//./_}.json/g" \
+      -e "s|(https://raw\\.githubusercontent\\.com/experimental-software/building-blocks-specification/refs/heads/main/)buildingblocks_schema\\.json|https://experimental-software.com/buildingblocks_${VERSION//./_}.json|g" \
+      -e "s/^buildingblocks: \"?[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?\"?/buildingblocks: \"${VERSION}\"/" \
+      "${file}"
+  done < <(find "${EXAMPLES_DIR}" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0)
+  echo "Examples updated to ${VERSION}"
+}
+
+validate_schema_and_examples() {
+  local -a example_files=()
+  mapfile -d '' -t example_files < <(find "${EXAMPLES_DIR}" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0)
+
+  if command -v check-jsonschema >/dev/null 2>&1; then
+    check-jsonschema --schemafile "${SCHEMA_FILE}" "${example_files[@]}" 2>/dev/null
+  else
+    ruby -e 'require "json"; require "yaml"; JSON.parse(File.read(ARGV.shift)); ARGV.each { |file| YAML.load_file(file, aliases: true) }' "${SCHEMA_FILE}" "${example_files[@]}"
+  fi
+}
+
+migrate_examples_if_needed() {
+  local migration_script="${SCRIPT_DIR}/migrate-example-properties.rb"
+  if ruby "${migration_script}" check "${CHANGELOG_FILE}" "${EXAMPLES_DIR}" >/dev/null 2>&1; then
+    return
+  fi
+
+  echo "Examples do not match the changelog migration; applying property migrations."
+  ruby "${migration_script}" migrate "${CHANGELOG_FILE}" "${EXAMPLES_DIR}"
+}
+
+validate_and_migrate_examples() {
+  if validate_schema_and_examples; then
+    migration_script="${SCRIPT_DIR}/migrate-example-properties.rb"
+    if ! ruby "${migration_script}" check "${CHANGELOG_FILE}" "${EXAMPLES_DIR}" >/dev/null 2>&1; then
+      migrate_examples_if_needed
+      validate_schema_and_examples || {
+        echo "ERROR: schema validation still fails after applying changelog migrations." >&2
+        exit 1
+      }
+    fi
+    echo "Schema and examples validated"
+  else
+    migrate_examples_if_needed
+    validate_schema_and_examples || {
+      echo "ERROR: schema validation still fails after applying changelog migrations." >&2
+      exit 1
+    }
+    echo "Schema and examples validated"
+  fi
 }
 
 validate_changelog() {
@@ -135,4 +192,6 @@ determine_version
 validate_changelog
 update_schema_id
 update_readme
+update_examples
+validate_and_migrate_examples
 release_changelog

@@ -5,6 +5,9 @@ ROOT=$(git rev-parse --show-toplevel)
 TEST_ROOT=$(mktemp -d)
 trap 'rm -rf -- "${TEST_ROOT}"' EXIT
 cp "${ROOT}/buildingblocks_schema.json" "${ROOT}/README.md" "${TEST_ROOT}/"
+mkdir "${TEST_ROOT}/examples"
+printf '# yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_1_6.json\nbuildingblocks: "0.1.6"\ncomponents:\n  - type: Input\n    name: Search\n    properties:\n      oldName: true\n' > "${TEST_ROOT}/examples/versioned.yml"
+printf '# yaml-language-server: $schema=https://raw.githubusercontent.com/experimental-software/building-blocks-specification/refs/heads/main/buildingblocks_schema.json\nbuildingblocks: "0.1.7-SNAPSHOT"\n' > "${TEST_ROOT}/examples/snapshot.yml"
 
 cat > "${TEST_ROOT}/CHANGELOG.md" <<'EOF'
 # Changelog
@@ -42,6 +45,7 @@ cp "${TEST_ROOT}/README.md" "${TEST_ROOT}/released-readme.md"
 change -c Added "Next change."
 change -c Added "Another change."
 change -c Fixed -b "Breaking fix."
+change -c Changed "Renamed \`oldName\` property to \`newName\` for Input components."
 cmp "${TEST_ROOT}/README.md" "${TEST_ROOT}/released-readme.md"
 grep -Fq 'buildingblocks_0_1_7-SNAPSHOT.json' "${TEST_ROOT}/buildingblocks_schema.json"
 awk '
@@ -56,6 +60,13 @@ grep -Fxq -- '- First change.' "${TEST_ROOT}/CHANGELOG.md"
 release
 grep -Fxq "## [0.1.7] - $(date -u +%F)" "${TEST_ROOT}/CHANGELOG.md"
 grep -Fq 'buildingblocks_0_1_7.json' "${TEST_ROOT}/README.md"
+grep -Fq 'buildingblocks:' "${TEST_ROOT}/examples/versioned.yml"
+grep -Fq '0.1.7' "${TEST_ROOT}/examples/versioned.yml"
+grep -Fxq 'buildingblocks: "0.1.7"' "${TEST_ROOT}/examples/snapshot.yml"
+grep -Fq 'newName: true' "${TEST_ROOT}/examples/versioned.yml"
+! grep -Fq 'oldName:' "${TEST_ROOT}/examples/versioned.yml"
+grep -Fq 'buildingblocks_0_1_7.json' "${TEST_ROOT}/examples/versioned.yml"
+grep -Fq 'buildingblocks_0_1_7.json' "${TEST_ROOT}/examples/snapshot.yml"
 if release -v 0.1.7; then
   echo "ERROR: release without an Unreleased section succeeded" >&2
   exit 1
