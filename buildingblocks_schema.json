@@ -374,7 +374,6 @@
         },
         "clearIcon": {
           "type": "boolean",
-          "default": false,
           "description": "Whether to show an icon inside the input field that clears the entered text when tapped."
         },
         "required": {
