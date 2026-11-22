@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file. The format is b
 - Minor version: Gets incremented with each breaking change.
 - Path version: Gets incremented with each non-breaking structural change.
 
+## [Unreleased]
+
+### Added
+
+- Optional top-level actions property with named actions and optional test cases.
+
 ## [0.1.7] - 2026-11-21
 
 ### Added
