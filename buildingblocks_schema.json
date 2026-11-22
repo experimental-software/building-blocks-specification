@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://experimental-software.com/buildingblocks_0_1_7.json",
+  "$id": "https://experimental-software.com/buildingblocks_0_1_8-SNAPSHOT.json",
   "title": "Building Blocks Specification",
-  "description": "Allows to describe the structure of View Elements and Events for graphical user interfaces in YAML files. Out of scope are Actions and visual design.",
+  "description": "Allows to describe the structure of View Elements, Events, and Actions for graphical user interfaces in YAML files. Out of scope is visual design.",
   "type": "object",
   "required": [
     "buildingblocks",
@@ -37,9 +37,55 @@
       "items": {
         "$ref": "#/$defs/component"
       }
+    },
+    "actions": {
+      "type": "array",
+      "description": "Top-level actions.",
+      "items": {
+        "$ref": "#/$defs/action"
+      }
     }
   },
   "$defs": {
+    "action": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the action."
+        },
+        "testCases": {
+          "type": "array",
+          "description": "Test cases for the action.",
+          "items": {
+            "$ref": "#/$defs/actionTestCase"
+          }
+        }
+      }
+    },
+    "actionTestCase": {
+      "type": "object",
+      "required": [
+        "name",
+        "expected"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the test case."
+        },
+        "expected": {
+          "type": "string",
+          "description": "Expected result of the test case."
+        }
+      }
+    },
     "component": {
       "type": "object",
       "required": [
