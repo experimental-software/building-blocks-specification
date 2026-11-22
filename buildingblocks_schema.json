@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://experimental-software.com/buildingblocks_0_1_8-SNAPSHOT.json",
+  "$id": "https://experimental-software.com/buildingblocks_0_1_8.json",
   "title": "Building Blocks Specification",
   "description": "Allows to describe the structure of View Elements, Events, and Actions for graphical user interfaces in YAML files. Out of scope is visual design.",
   "type": "object",
