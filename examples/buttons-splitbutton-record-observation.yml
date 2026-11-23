@@ -1,5 +1,5 @@
-# yaml-language-server: $schema=https://experimental-software.com/buildingblocks_0_1_8.json
-buildingblocks: "0.1.8"
+# yaml-language-server: $schema=https://raw.githubusercontent.com/experimental-software/building-blocks-specification/refs/tags/0.2.0/buildingblocks_schema.json
+buildingblocks: "0.2.0"
 info:
   title: Patient observations
 components:
