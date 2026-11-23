@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://experimental-software.com/buildingblocks_0_1_8.json",
+  "$id": "https://experimental-software.com/buildingblocks_0_1_9-SNAPSHOT.json",
   "title": "Building Blocks Specification",
   "description": "Allows to describe the structure of View Elements, Events, and Actions for graphical user interfaces in YAML files. Out of scope is visual design.",
   "type": "object",
@@ -221,7 +221,7 @@
         },
         "children": {
           "type": "array",
-          "description": "Each item contains exactly one of rule, background, scenario.",
+          "description": "Each item contains exactly one of rule, background, scenario, scenarioOutline.",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -240,6 +240,11 @@
                 "required": [
                   "scenario"
                 ]
+              },
+              {
+                "required": [
+                  "scenarioOutline"
+                ]
               }
             ],
             "properties": {
@@ -251,6 +256,9 @@
               },
               "scenario": {
                 "$ref": "#/$defs/scenario"
+              },
+              "scenarioOutline": {
+                "$ref": "#/$defs/scenarioOutline"
               }
             }
           }
@@ -277,7 +285,7 @@
         },
         "children": {
           "type": "array",
-          "description": "Each item contains exactly one of background, scenario.",
+          "description": "Each item contains exactly one of background, scenario, scenarioOutline.",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -291,6 +299,11 @@
                 "required": [
                   "scenario"
                 ]
+              },
+              {
+                "required": [
+                  "scenarioOutline"
+                ]
               }
             ],
             "properties": {
@@ -299,6 +312,9 @@
               },
               "scenario": {
                 "$ref": "#/$defs/scenario"
+              },
+              "scenarioOutline": {
+                "$ref": "#/$defs/scenarioOutline"
               }
             }
           }
@@ -328,7 +344,7 @@
     },
     "scenario": {
       "type": "object",
-      "description": "A Gherkin scenario. Scenario outlines are expressed by adding the Examples keyword and table as a separate multi-line last step.",
+      "description": "A Gherkin scenario.",
       "required": [
         "name",
         "steps"
@@ -352,10 +368,44 @@
         }
       }
     },
+    "scenarioOutline": {
+      "type": "object",
+      "description": "A Gherkin scenario outline.",
+      "required": [
+        "name",
+        "steps",
+        "examples"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
     "step": {
       "type": "string",
       "minLength": 1,
-      "description": "Step text as written, including the leading keyword (Given, When, Then, And, But, *). May be multi-line to include a doc string, or data table. An examples table is a separate last step."
+      "description": "Step text as written, including the leading keyword (Given, When, Then, And, But, *). May be multi-line to include a doc string or data table."
     },
     "splitButtonProperties": {
       "type": "object",
