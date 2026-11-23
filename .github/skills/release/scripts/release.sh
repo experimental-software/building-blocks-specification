@@ -84,15 +84,22 @@ determine_version() {
 }
 
 update_schema_id() {
-  local old_id new_id
+  local old_id
   old_id=$(jq -er '."$id"' "${SCHEMA_FILE}")
   if [[ ! "${old_id}" =~ ^(.*buildingblocks_)[0-9]+_[0-9]+_[0-9]+(-SNAPSHOT)?\.json$ ]]; then
     echo "ERROR: schema \$id has an invalid version: ${old_id}" >&2
     exit 1
   fi
-  new_id="${BASH_REMATCH[1]}${VERSION//./_}.json"
-  sed -i "s|\"\\\$id\": \"${old_id}\"|\"\$id\": \"${new_id}\"|" "${SCHEMA_FILE}"
-  echo "Schema \$id: ${old_id} -> ${new_id}"
+  sed -i "s|\"\\\$id\": \"${old_id}\"|\"\$id\": \"${SCHEMA_URL}\"|" "${SCHEMA_FILE}"
+  echo "Schema \$id: ${old_id} -> ${SCHEMA_URL}"
+}
+
+update_schema_url() {
+  local file=$1
+  sed -i -E \
+    -e "s|https://experimental-software\\.com/buildingblocks_[0-9]+_[0-9]+_[0-9]+\\.json|${SCHEMA_URL}|g" \
+    -e "s#https://raw\\.githubusercontent\\.com/experimental-software/building-blocks-specification/refs/(heads/main|tags/[0-9]+\\.[0-9]+\\.[0-9]+)/buildingblocks_schema\\.json#${SCHEMA_URL}#g" \
+    "${file}"
 }
 
 update_readme() {
@@ -100,6 +107,7 @@ update_readme() {
     -e "s/(buildingblocks_)[0-9]+_[0-9]+_[0-9]+(-SNAPSHOT)?\.json/\1${VERSION//./_}.json/g" \
     -e "s/^(buildingblocks: )[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?/\1${VERSION}/" \
     "${README_FILE}"
+  update_schema_url "${README_FILE}"
   echo "README examples updated to ${VERSION}"
 }
 
@@ -108,9 +116,9 @@ update_examples() {
   while IFS= read -r -d '' file; do
     sed -i -E \
       -e "s/(buildingblocks_)[0-9]+_[0-9]+_[0-9]+(-SNAPSHOT)?\.json/\1${VERSION//./_}.json/g" \
-      -e "s|(https://raw\\.githubusercontent\\.com/experimental-software/building-blocks-specification/refs/heads/main/)buildingblocks_schema\\.json|https://experimental-software.com/buildingblocks_${VERSION//./_}.json|g" \
       -e "s/^buildingblocks: \"?[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?\"?/buildingblocks: \"${VERSION}\"/" \
       "${file}"
+    update_schema_url "${file}"
   done < <(find "${EXAMPLES_DIR}" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0)
   echo "Examples updated to ${VERSION}"
 }
@@ -189,6 +197,7 @@ release_changelog() {
 # ==============================================================================
 
 determine_version
+SCHEMA_URL="https://raw.githubusercontent.com/experimental-software/building-blocks-specification/refs/tags/${VERSION}/buildingblocks_schema.json"
 validate_changelog
 update_schema_id
 update_readme
