@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file. The format is b
 - Minor version: Gets incremented with each breaking change.
 - Patch version: Gets incremented with each non-breaking structural change.
 
+## [Unreleased]
+
+### Added
+
+- Select, List, and RadioGroup components with options and selection properties
+
 ## [0.2.0] - 2026-11-23
 
 ### Changed
