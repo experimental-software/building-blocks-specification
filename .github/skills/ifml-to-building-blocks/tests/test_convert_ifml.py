@@ -1,0 +1,147 @@
+import base64
+from pathlib import Path
+import tempfile
+import unittest
+import urllib.parse
+import zlib
+
+import sys
+
+SCRIPT_DIR = Path(__file__).resolve().parents[1] / "scripts"
+sys.path.insert(0, str(SCRIPT_DIR))
+
+import convert_ifml  # noqa: E402
+
+
+def diagram(cells: str) -> str:
+    return f"""<mxfile><diagram name="Page-1"><mxGraphModel><root>
+      <mxCell id="0"/><mxCell id="1" parent="0"/>{cells}
+    </root></mxGraphModel></diagram></mxfile>"""
+
+
+class ConvertIfmlTests(unittest.TestCase):
+    def test_maps_view_containers_and_components(self):
+        source = diagram("""
+          <mxCell id="10" parent="1" vertex="1" value=""
+            style="childLayout=stackLayout;"><mxGeometry as="geometry"/></mxCell>
+          <mxCell id="11" parent="10" vertex="1" value="Homepage"
+            style="align=left;"><mxGeometry as="geometry"/></mxCell>
+          <mxCell id="12" parent="10" vertex="1" value=""
+            style="swimlane=1;"><mxGeometry as="geometry"/></mxCell>
+          <mxCell id="13" parent="12" vertex="1"
+            value="&lt;div&gt;«Text»&lt;/div&gt;&lt;span&gt;Headline&lt;/span&gt;"
+            style="shape=mxgraph.bpmn.task2;"><mxGeometry as="geometry"/></mxCell>
+          <mxCell id="14" parent="12" vertex="1"
+            value="&lt;div&gt;«Input»&lt;/div&gt;&lt;span&gt;Name&lt;/span&gt;"
+            style="shape=mxgraph.bpmn.task2;"><mxGeometry as="geometry"/></mxCell>
+          <mxCell id="15" parent="12" vertex="1" value=""
+            style="childLayout=stackLayout;"><mxGeometry y="200" as="geometry"/></mxCell>
+          <mxCell id="18" parent="15" vertex="1" value="«Alert Dialog» Greeting"/>
+          <mxCell id="16" parent="15" vertex="1" value=""
+            style="swimlane=1;"><mxGeometry as="geometry"/></mxCell>
+          <mxCell id="17" parent="16" vertex="1"
+            value="&lt;div&gt;«Button»&lt;/div&gt;&lt;span&gt;Close&lt;/span&gt;"
+            style="shape=mxgraph.bpmn.task2;"><mxGeometry as="geometry"/></mxCell>
+        """)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "desktop.ifml.drawio"
+            path.write_text(source, encoding="utf-8")
+            output, omissions = convert_ifml.convert(path)
+
+        self.assertIn("refs/tags/0.2.0/buildingblocks_schema.json", output)
+        self.assertIn('type: "Window"', output)
+        self.assertIn('type: "Alert Dialog"', output)
+        self.assertIn('name: "Headline"', output)
+        self.assertIn('name: "Name"', output)
+        self.assertIn('name: "Close"', output)
+        self.assertEqual(omissions, [])
+
+    def test_maps_actions_and_reports_unrepresentable_elements(self):
+        source = diagram("""
+          <mxCell id="20" parent="1" vertex="1" value="Send"
+            style="shape=hexagon;"/><mxGeometry as="geometry"/>
+          <mxCell id="21" parent="1" vertex="1" value="«DataBinding» Items"
+            style="rounded=0;whiteSpace=wrap;"/>
+          <mxCell id="22" parent="1" vertex="1" value="«ActivationExpression» x = 1"
+            style="shape=note;"/>
+          <mxCell id="23" parent="1" vertex="1" value="contact → contactID"
+            style="shape=parallelogram;"/>
+          <mxCell id="24" parent="1" vertex="1" value=""
+            style="shape=mxgraph.bpmn.event;"/>
+          <mxCell id="25" parent="1" edge="1" value=""
+            style="dashed=1;endArrow=classic;"/>
+        """)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "diagram.drawio"
+            path.write_text(source, encoding="utf-8")
+            output, omissions = convert_ifml.convert(path)
+
+        self.assertIn('actions:\n  - name: "Send"', output)
+        self.assertEqual(len(omissions), 5)
+        self.assertTrue(any("component part" in item["reason"] for item in omissions))
+        self.assertTrue(any("annotation" in item["reason"] for item in omissions))
+        self.assertTrue(any("Parameter binding" in item["reason"] for item in omissions))
+        self.assertTrue(any("event" in item["reason"] for item in omissions))
+        self.assertTrue(any("flow/relationship" in item["reason"] for item in omissions))
+
+    def test_omits_unknown_components_and_types_with_required_properties(self):
+        source = diagram("""
+          <mxCell id="30" parent="1" vertex="1" value="Unknown"
+            style="shape=mxgraph.bpmn.task2;"/>
+          <mxCell id="31" parent="1" vertex="1" value="«SplitButton» Choose"
+            style="shape=mxgraph.bpmn.task2;"/>
+          <mxCell id="32" parent="1" vertex="1" value="«Button»"
+            style="shape=mxgraph.bpmn.task2;"/>
+        """)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "diagram.drawio"
+            path.write_text(source, encoding="utf-8")
+            output, omissions = convert_ifml.convert(path)
+
+        self.assertIn("components:\n", output)
+        self.assertNotIn("Choose", output)
+        self.assertNotIn('"Button"', output)
+        self.assertEqual(len(omissions), 3)
+        self.assertTrue(any("schema properties" in item["reason"] for item in omissions))
+        self.assertTrue(any("type or non-empty name" in item["reason"] for item in omissions))
+
+    def test_maps_module_text_and_list_components(self):
+        source = diagram("""
+          <mxCell id="40" parent="1" vertex="1" value=""
+            style="childLayout=stackLayout;fillColor=#f5f5f5;strokeColor=#666666;"/>
+          <mxCell id="41" parent="40" vertex="1" value="PreferenceSetter"/>
+          <mxCell id="42" parent="40" vertex="1" value="" style="swimlane=1;"/>
+          <mxCell id="43" parent="42" vertex="1" value="Text"
+            style="text;html=1;"/>
+          <mxCell id="44" parent="42" vertex="1" value="«List» MessageList"
+            style="text;html=1;"/>
+        """)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "module.drawio"
+            path.write_text(source, encoding="utf-8")
+            output, omissions = convert_ifml.convert(path)
+
+        self.assertIn('type: "Module"', output)
+        self.assertIn('name: "PreferenceSetter"', output)
+        self.assertIn('type: "Text"', output)
+        self.assertIn('name: "Text"', output)
+        self.assertIn('type: "List"', output)
+        self.assertIn('name: "MessageList"', output)
+        self.assertEqual(omissions, [])
+
+    def test_reads_compressed_drawio_pages(self):
+        inner = '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" parent="1" vertex="1" value="Do it" style="shape=hexagon;"/></root></mxGraphModel>'
+        compressed = zlib.compressobj(wbits=-zlib.MAX_WBITS)
+        payload = compressed.compress(urllib.parse.quote(inner).encode("utf-8")) + compressed.flush()
+        source = f"<mxfile><diagram>{base64.b64encode(payload).decode('ascii')}</diagram></mxfile>"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "compressed.drawio"
+            path.write_text(source, encoding="utf-8")
+            output, omissions = convert_ifml.convert(path)
+
+        self.assertIn('name: "Do it"', output)
+        self.assertEqual(omissions, [])
+
+
+if __name__ == "__main__":
+    unittest.main()
