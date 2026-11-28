@@ -418,7 +418,7 @@ def _emit_yaml(document: dict) -> str:
         f"buildingblocks: {_yaml_scalar(document['version'])}",
         "info:",
         f"  title: {_yaml_scalar(document['title'])}",
-        "components:",
+        "components:" if document["components"] else "components: []",
     ]
 
     def emit_component(component: dict, indent: int) -> None:
