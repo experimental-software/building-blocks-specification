@@ -20,9 +20,10 @@ optional arguments:
   -h    Show this help message and exit.
 
 Adds the entry to the first section of CHANGELOG.md, creating "## [Unreleased]"
-if needed, and, unless the schema \$id already ends in "-SNAPSHOT.json", bumps
-its patch version and adds that suffix. README.md is not changed. No release,
-tag or branch is created.
+if needed, then sets the schema \$id to
+"https://experimental-software.com/draft/buildingblocks_<version>-SNAPSHOT.json".
+The patch version is bumped unless the schema \$id is already a snapshot.
+README.md is not changed. No release, tag or branch is created.
 
 dependencies:
   - jq
@@ -94,19 +95,24 @@ update_snapshot_version() {
     exit 1
   }
 
-  if [[ "${id}" == *-SNAPSHOT.json ]]; then
-    echo "Schema \$id is already a snapshot: ${id}"
-    return
-  fi
-
-  if [[ ! "${id}" =~ ^(.*buildingblocks_)([0-9]+)_([0-9]+)_([0-9]+)\.json$ ]]; then
+  if [[ ! "${id}" =~ ^.*buildingblocks_([0-9]+)_([0-9]+)_([0-9]+)(-SNAPSHOT)?\.json$ ]]; then
     echo "ERROR: schema \$id has an invalid version: ${id}" >&2
     exit 1
   fi
 
-  local new_id="${BASH_REMATCH[1]}${BASH_REMATCH[2]}_${BASH_REMATCH[3]}_$((BASH_REMATCH[4] + 1))-SNAPSHOT.json"
-  set_schema_id "${new_id}"
-  echo "Schema \$id: ${id} -> ${new_id}"
+  local major="${BASH_REMATCH[1]}"
+  local minor="${BASH_REMATCH[2]}"
+  local patch="${BASH_REMATCH[3]}"
+  local snapshot="${BASH_REMATCH[4]}"
+  [[ -n "${snapshot}" ]] || patch=$((patch + 1))
+
+  local new_id="https://experimental-software.com/draft/buildingblocks_${major}_${minor}_${patch}-SNAPSHOT.json"
+  if [[ "${id}" == "${new_id}" ]]; then
+    echo "Schema \$id is already a draft: ${id}"
+  else
+    set_schema_id "${new_id}"
+    echo "Schema \$id: ${id} -> ${new_id}"
+  fi
 }
 
 add_changelog_entry() {
