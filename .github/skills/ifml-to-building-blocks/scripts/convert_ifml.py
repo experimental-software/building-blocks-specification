@@ -41,14 +41,16 @@ COMPONENT_PART_STEREOTYPES = {
 @dataclass
 class Component:
     cell_id: str
-    type: str
+    type: str | None
     name: str
     parent_container_id: str | None
     is_container: bool = False
     children: list[Component] = field(default_factory=list)
 
     def as_mapping(self) -> dict:
-        result = {"type": self.type, "name": self.name}
+        result = {"name": self.name}
+        if self.type:
+            result = {"type": self.type, **result}
         if self.children:
             result["children"] = [child.as_mapping() for child in self.children]
         return result
@@ -228,10 +230,6 @@ def _position(cell: ET.Element) -> tuple[float, float]:
     return (y, x)
 
 
-def _map_container_type(stereotype: str | None, is_module: bool) -> str | None:
-    if stereotype:
-        return stereotype
-    return "Module" if is_module else "Window"
 
 
 def _convert_model(model: ET.Element) -> tuple[list[Component], list[dict[str, str]], list[dict[str, str]]]:
@@ -254,12 +252,10 @@ def _convert_model(model: ET.Element) -> tuple[list[Component], list[dict[str, s
             consumed.add(cell_id)
             continue
         stereotype, name = _label(header.get("value", ""))
-        cell_style = _style(cell)
-        is_module = cell_style.get("fillColor", "").lower() == "#f5f5f5"
-        component_type = _map_container_type(stereotype, is_module)
-        if not name or not component_type:
+        component_type = stereotype or None
+        if not name:
             omissions.append(_report(cell_id, _plain_text(header.get("value", "")),
-                                     "View container requires an inferable type and non-empty name."))
+                                     "View container requires a non-empty name."))
             consumed.update({cell_id, header.get("id", ""), body.get("id", "")})
             continue
         component = Component(
@@ -356,7 +352,7 @@ def _convert_model(model: ET.Element) -> tuple[list[Component], list[dict[str, s
                     ))
                     continue
             elif shape == "text" and text:
-                component_type, name = "Text", text
+                name = text
             elif stereotype is None and text:
                 omissions.append(_report(cell_id, text, "IFML component part or label has no schema mapping."))
                 continue
@@ -364,11 +360,8 @@ def _convert_model(model: ET.Element) -> tuple[list[Component], list[dict[str, s
             omissions.append(_report(cell_id, text, "This diagram element has an unsupported shape."))
             continue
 
-        if component_type is None or not name:
-            omissions.append(_report(
-                cell_id, text,
-                "Component type or non-empty name could not be inferred.",
-            ))
+        if not name:
+            omissions.append(_report(cell_id, text, "Component name could not be inferred."))
             continue
         parent_container_id = _nearest_container(
             cell.get("parent", ""), body_to_container, cells_by_id, container_ids
@@ -424,8 +417,11 @@ def _emit_yaml(document: dict) -> str:
     ]
 
     def emit_component(component: dict, indent: int) -> None:
-        lines.append(" " * indent + f"- type: {_yaml_scalar(component['type'])}")
-        lines.append(" " * (indent + 2) + f"name: {_yaml_scalar(component['name'])}")
+        if component.get("type"):
+            lines.append(" " * indent + f"- type: {_yaml_scalar(component['type'])}")
+            lines.append(" " * (indent + 2) + f"name: {_yaml_scalar(component['name'])}")
+        else:
+            lines.append(" " * indent + f"- name: {_yaml_scalar(component['name'])}")
         if component.get("children"):
             lines.append(" " * (indent + 2) + "children:")
             for child in component["children"]:

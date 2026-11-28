@@ -15,7 +15,7 @@ Read supplied diagram text from the conversation itself; an uploaded file is oft
 4. If the script reports omissions on standard error, report those after the closed YAML code block, outside the YAML. Never imply that an omitted element was converted.
 5. Do not create or modify repository files while converting a user's diagram. The script reads the input and repository README, writes YAML to the specified output file, and reports omissions on standard error. Remove temporary files when they are no longer needed.
 
-The converter reads the published version and schema URL from the usage example in the repository `README.md`. It maps view containers, view components, and actions when their required information can be inferred. An explicit stereotype inside `«...»` becomes the component type without substitution. IFML events, flows, component parts, and other unsupported or ambiguous elements are reported as omissions.
+The converter reads the published version and schema URL from the usage example in the repository `README.md`. It maps view containers, view components, and actions when their required information can be inferred. An explicit stereotype inside `«...»` becomes the component type without substitution; components without a stereotype get no `type` property. IFML events, flows, component parts, and other unsupported or ambiguous elements are reported as omissions.
 
 Run the focused dependency-free tests with:
 

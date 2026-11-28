@@ -50,7 +50,8 @@ class ConvertIfmlTests(unittest.TestCase):
             output, omissions = convert_ifml.convert(path)
 
         self.assertIn("refs/tags/0.2.0/buildingblocks_schema.json", output)
-        self.assertIn('type: "Window"', output)
+        self.assertNotIn('type: "Window"', output)
+        self.assertIn('- name: "Homepage"', output)
         self.assertIn('type: "Alert Dialog"', output)
         self.assertIn('name: "Headline"', output)
         self.assertIn('name: "Name"', output)
@@ -85,7 +86,7 @@ class ConvertIfmlTests(unittest.TestCase):
         self.assertTrue(any("event" in item["reason"] for item in omissions))
         self.assertTrue(any("flow/relationship" in item["reason"] for item in omissions))
 
-    def test_omits_unknown_components_and_types_with_required_properties(self):
+    def test_omits_nameless_components_and_types_with_required_properties(self):
         source = diagram("""
           <mxCell id="30" parent="1" vertex="1" value="Unknown"
             style="shape=mxgraph.bpmn.task2;"/>
@@ -99,12 +100,12 @@ class ConvertIfmlTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             output, omissions = convert_ifml.convert(path)
 
-        self.assertIn("components: []\n", output)
+        self.assertIn('components:\n  - name: "Unknown"\n', output)
         self.assertNotIn("Choose", output)
         self.assertNotIn('"Button"', output)
-        self.assertEqual(len(omissions), 3)
+        self.assertEqual(len(omissions), 2)
         self.assertTrue(any("schema properties" in item["reason"] for item in omissions))
-        self.assertTrue(any("type or non-empty name" in item["reason"] for item in omissions))
+        self.assertTrue(any("name could not be inferred" in item["reason"] for item in omissions))
 
     def test_maps_module_text_and_list_components(self):
         source = diagram("""
@@ -122,10 +123,10 @@ class ConvertIfmlTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             output, omissions = convert_ifml.convert(path)
 
-        self.assertIn('type: "Module"', output)
-        self.assertIn('name: "PreferenceSetter"', output)
-        self.assertIn('type: "Text"', output)
-        self.assertIn('name: "Text"', output)
+        self.assertNotIn('type: "Module"', output)
+        self.assertIn('- name: "PreferenceSetter"', output)
+        self.assertNotIn('type: "Text"', output)
+        self.assertIn('- name: "Text"', output)
         self.assertIn('type: "List"', output)
         self.assertIn('name: "MessageList"', output)
         self.assertEqual(omissions, [])
@@ -153,6 +154,7 @@ class ConvertIfmlTests(unittest.TestCase):
 
         self.assertIn('type: "Modal"\n    name: "Inventory item dialog"', output)
         self.assertIn('type: "View Container"\n    name: "Settings"', output)
+        self.assertNotIn("type:", output.split("Settings")[1])
         self.assertNotIn('type: "Alert Dialog"', output)
         self.assertEqual(omissions, [])
 
