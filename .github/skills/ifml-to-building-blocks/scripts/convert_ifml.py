@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import binascii
 import html
 from html.parser import HTMLParser
 import json
@@ -75,13 +76,16 @@ def _local_name(element: ET.Element) -> str:
 
 
 def _parse_compressed_diagram(diagram: ET.Element) -> ET.Element:
-    encoded = "".join(diagram.itertext()).strip()
-    raw = base64.b64decode(encoded)
     try:
-        decoded = zlib.decompress(raw, -zlib.MAX_WBITS)
-    except zlib.error:
-        decoded = zlib.decompress(raw)
-    return ET.fromstring(urllib.parse.unquote(decoded.decode("utf-8")))
+        encoded = "".join("".join(diagram.itertext()).split())
+        raw = base64.b64decode(encoded, validate=True)
+        try:
+            decoded = zlib.decompress(raw, -zlib.MAX_WBITS)
+        except zlib.error:
+            decoded = zlib.decompress(raw)
+        return ET.fromstring(urllib.parse.unquote(decoded.decode("utf-8")))
+    except (binascii.Error, zlib.error, UnicodeDecodeError, ET.ParseError) as exc:
+        raise ValueError("Could not read the compressed diagram page.") from exc
 
 
 def _graph_models(root: ET.Element) -> list[ET.Element]:
@@ -96,11 +100,13 @@ def _graph_models(root: ET.Element) -> list[ET.Element]:
         ):
             models.append(_parse_compressed_diagram(child))
     if not models:
-        raise ValueError("No mxGraphModel was found in the .drawio file.")
+        raise ValueError("No diagram page was found in the draw.io file.")
     return models
 
 
 def _decode_xml(path: Path) -> list[ET.Element]:
+    if not path.is_file():
+        raise ValueError(f"Diagram input is not a regular file: {path}")
     try:
         root = ET.parse(path).getroot()
     except (ET.ParseError, OSError) as exc:
@@ -223,13 +229,9 @@ def _position(cell: ET.Element) -> tuple[float, float]:
 
 
 def _map_container_type(stereotype: str | None, is_module: bool) -> str | None:
-    if is_module:
-        return "Module"
-    if stereotype in {None, "", "Window", "View Container"}:
-        return "Window"
-    if stereotype in {"Modal", "Alert Dialog"}:
-        return "Alert Dialog"
-    return stereotype
+    if stereotype:
+        return stereotype
+    return "Module" if is_module else "Window"
 
 
 def _convert_model(model: ET.Element) -> tuple[list[Component], list[dict[str, str]], list[dict[str, str]]]:
@@ -359,7 +361,7 @@ def _convert_model(model: ET.Element) -> tuple[list[Component], list[dict[str, s
                 omissions.append(_report(cell_id, text, "IFML component part or label has no schema mapping."))
                 continue
         elif shape:
-            omissions.append(_report(cell_id, text, f"Unsupported IFML shape '{shape}'."))
+            omissions.append(_report(cell_id, text, "This diagram element has an unsupported shape."))
             continue
 
         if component_type is None or not name:
@@ -466,18 +468,25 @@ def convert(path: Path) -> tuple[str, list[dict[str, str]]]:
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("diagram", type=Path, help="path to a .drawio file")
+    parser.add_argument("output", type=Path, help="path to the output YAML file")
     args = parser.parse_args(argv)
     try:
+        if args.diagram.resolve() == args.output.resolve() or (
+            args.diagram.exists() and args.output.exists() and args.diagram.samefile(args.output)
+        ):
+            raise ValueError("The input diagram and output YAML must be different files.")
+        if args.output.exists() and not args.output.is_file():
+            raise ValueError(f"YAML output is not a regular file: {args.output}")
         yaml, omissions = convert(args.diagram)
-    except (ValueError, ET.ParseError, OSError, zlib.error) as exc:
+        args.output.write_text(yaml, encoding="utf-8")
+    except (ValueError, OSError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
-    sys.stdout.write(yaml)
     if omissions:
         print("\nOmissions:", file=sys.stderr)
         for omission in omissions:
             print(
-                f"- Cell {omission['cell']} ({omission['label']}): {omission['reason']}",
+                f"- Diagram element {omission['cell']} ({omission['label']}): {omission['reason']}",
                 file=sys.stderr,
             )
     return 0

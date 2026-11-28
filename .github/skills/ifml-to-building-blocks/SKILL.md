@@ -5,23 +5,17 @@ description: Convert an IFML diagram in a .drawio file into minimal YAML for the
 
 # Convert IFML diagrams to Building Blocks YAML
 
-Use only a `.drawio` file attached to the user's conversation as the diagram input. Do not search this repository for a diagram or substitute a repository example. If no `.drawio` file is attached, ask the user to upload one and wait for it before proceeding.
+Use only a `.drawio` file or draw.io XML supplied in the user's conversation as the diagram input. Do not search this repository for a diagram or substitute a repository example. If no diagram is supplied, ask the user to upload one and wait for it before proceeding.
 
-Read the attachment as text from the conversation itself (the attached content is available in the prompt), not from the environment's file storage; the uploaded file is often absent from the filesystem, which is not a reason to stop. If the file is accessible on disk, passing its path is fine. Otherwise pipe the diagram text to the script via standard input. If several are attached and the intended file is unclear, ask the user which to use.
+Read supplied diagram text from the conversation itself; an uploaded file is often absent from the filesystem, which is not a reason to stop. If the file is accessible on disk, passing its path is fine. Otherwise write the supplied XML verbatim to a temporary `.drawio` file. If several diagrams are supplied and the intended one is unclear, ask the user which to use.
 
-1. Run `python3 .github/skills/ifml-to-building-blocks/scripts/convert_ifml.py "<path-to-attached-drawio>"`, keeping standard output separate from standard error. If there is no accessible file, provide the attachment text on standard input with the path `/dev/stdin`, using a quoted heredoc so nothing is expanded:
-
-   ```sh
-   python3 .github/skills/ifml-to-building-blocks/scripts/convert_ifml.py /dev/stdin <<'DRAWIO'
-   <attachment text verbatim>
-   DRAWIO
-   ```
-2. Check that the complete output parses as YAML and validates against the JSON Schema URL in its `yaml-language-server` directive, using a validator that supports JSON Schema Draft 2020-12. If validation fails, do not present the output as valid; explain the error. If validation cannot be performed, state that explicitly.
-3. Return the entire standard output verbatim in one fenced `yaml` code block. Put the opening fence ` ```yaml ` on its own line, followed on the next line by the schema directive and the rest of the YAML; put the closing fence ` ``` ` on its own line after the final YAML line. Do not put introductory text on the opening fence line or omit the directive, indentation, or any part of the output. The block must be a complete, copyable YAML file.
+1. Run `python3 .github/skills/ifml-to-building-blocks/scripts/convert_ifml.py "<path-to-diagram.drawio>" "<path-to-temporary-output.yaml>"`. The input and output must be separate regular files. Keep omission diagnostics on standard error.
+2. Check that the complete output file parses as YAML and validates against the JSON Schema URL in its `yaml-language-server` directive, using a validator that supports JSON Schema Draft 2020-12. If validation fails, do not present the output as valid; explain the error. If validation cannot be performed, state that explicitly.
+3. Return the entire output file verbatim in one fenced `yaml` code block. Put the opening fence ` ```yaml ` on its own line, followed on the next line by the schema directive and the rest of the YAML; put the closing fence ` ``` ` on its own line after the final YAML line. Do not put introductory text on the opening fence line or omit the directive, indentation, or any part of the output. The block must be a complete, copyable YAML file.
 4. If the script reports omissions on standard error, report those after the closed YAML code block, outside the YAML. Never imply that an omitted element was converted.
-5. Do not create or modify repository files while converting a user's diagram. The script only reads the input and repository README and writes YAML to standard output and omission diagnostics to standard error.
+5. Do not create or modify repository files while converting a user's diagram. The script reads the input and repository README, writes YAML to the specified output file, and reports omissions on standard error. Remove temporary files when they are no longer needed.
 
-The converter reads the published version and schema URL from the usage example in the repository `README.md`. It maps view containers, view components, and actions when their required information can be inferred. IFML events, flows, component parts, and other unsupported or ambiguous cells are reported as omissions.
+The converter reads the published version and schema URL from the usage example in the repository `README.md`. It maps view containers, view components, and actions when their required information can be inferred. An explicit stereotype inside `«...»` becomes the component type without substitution. IFML events, flows, component parts, and other unsupported or ambiguous elements are reported as omissions.
 
 Run the focused dependency-free tests with:
 
