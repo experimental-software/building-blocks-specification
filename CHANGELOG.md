@@ -14,6 +14,10 @@ All notable changes to this project are documented in this file. The format is b
 
 - Select, List, and RadioGroup components with options and selection properties
 
+### Changed
+
+- The `type` property of components is optional
+
 ## [0.2.0] - 2026-11-23
 
 ### Changed
