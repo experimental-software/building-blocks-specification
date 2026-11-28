@@ -25,9 +25,12 @@ ROOT = Path(SCRIPT_DIR) / "../../../../"
 SCHEMA = ROOT / "buildingblocks_schema.json"
 README = ROOT / "README.md"
 VERSION_RE = re.compile(
-    r"yaml-language-server:\s*\$schema=https://raw\.githubusercontent\.com/"
-    r"experimental-software/building-blocks-specification/refs/tags/"
-    r"(\d+\.\d+\.\d+)/buildingblocks_schema\.json"
+    r"""^buildingblocks:[ \t]*(["']?)(\d+\.\d+\.\d+)\1[ \t]*(?:#.*)?$""",
+    re.MULTILINE,
+)
+USAGE_RE = re.compile(r"^## Usage[ \t]*$([\s\S]*?)(?=^## |\Z)", re.MULTILINE)
+YAML_EXAMPLE_RE = re.compile(
+    r"^```(?:yaml|yml)[ \t]*\r?\n([\s\S]*?)^```[ \t]*$", re.MULTILINE
 )
 STEREOTYPE_RE = re.compile(r"«([^»]+)»")
 REQUIRED_PROPERTY_TYPES = {"SplitButton"}
@@ -160,14 +163,26 @@ def _read_schema_info() -> tuple[str, str]:
     if not isinstance(schema_url, str) or not schema_url:
         raise ValueError("The current Building Blocks schema has no valid $id.")
 
+    if "tags" in schema_url:
+        path_parts = urllib.parse.urlsplit(schema_url).path.split("/")
+        try:
+            tag = path_parts[path_parts.index("tags") + 1]
+        except (ValueError, IndexError) as exc:
+            raise ValueError("Could not find a version tag in the schema $id.") from exc
+        if not re.fullmatch(r"\d+\.\d+\.\d+", tag):
+            raise ValueError("Could not find a valid version tag in the schema $id.")
+        return tag, schema_url
+
     try:
         readme = README.read_text(encoding="utf-8")
     except OSError as exc:
         raise ValueError(f"Could not read the repository README: {exc}") from exc
-    match = VERSION_RE.search(readme)
+    usage = USAGE_RE.search(readme)
+    example = YAML_EXAMPLE_RE.search(usage.group(1)) if usage else None
+    match = VERSION_RE.search(example.group(1)) if example else None
     if not match:
         raise ValueError("Could not find the specification version in the README usage example.")
-    major, minor, patch = (int(part) for part in match.group(1).split("."))
+    major, minor, patch = (int(part) for part in match.group(2).split("."))
     version = f"{major}.{minor}.{patch + 1}-SNAPSHOT"
     return version, schema_url
 
