@@ -1,5 +1,6 @@
 import base64
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 import urllib.parse
@@ -98,7 +99,7 @@ class ConvertIfmlTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             output, omissions = convert_ifml.convert(path)
 
-        self.assertIn("components:\n", output)
+        self.assertIn("components: []\n", output)
         self.assertNotIn("Choose", output)
         self.assertNotIn('"Button"', output)
         self.assertEqual(len(omissions), 3)
@@ -141,6 +142,32 @@ class ConvertIfmlTests(unittest.TestCase):
 
         self.assertIn('name: "Do it"', output)
         self.assertEqual(omissions, [])
+
+    def test_cli_emits_complete_yaml_and_keeps_omissions_on_stderr(self):
+        source = diagram("""
+          <mxCell id="20" parent="1" vertex="1" value="Send"
+            style="shape=hexagon;"/>
+          <mxCell id="21" parent="1" edge="1" value="Flow"/>
+        """)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "diagram.drawio"
+            path.write_text(source, encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT_DIR / "convert_ifml.py"), str(path)],
+                capture_output=True, text=True, check=True,
+            )
+
+        self.assertEqual(result.stdout, (
+            "# yaml-language-server: $schema=https://raw.githubusercontent.com/"
+            "experimental-software/building-blocks-specification/refs/tags/"
+            "0.2.0/buildingblocks_schema.json\n"
+            'buildingblocks: "0.2.0"\n'
+            'info:\n  title: "Diagram"\n'
+            'components: []\n'
+            'actions:\n  - name: "Send"\n'
+        ))
+        self.assertIn("Omissions:", result.stderr)
+        self.assertIn("Flow", result.stderr)
 
 
 if __name__ == "__main__":
