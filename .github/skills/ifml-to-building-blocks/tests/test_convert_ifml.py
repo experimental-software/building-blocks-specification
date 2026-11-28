@@ -1,4 +1,5 @@
 import base64
+import json
 from pathlib import Path
 import subprocess
 import tempfile
@@ -18,6 +19,15 @@ def diagram(cells: str) -> str:
     return f"""<mxfile><diagram name="Page-1"><mxGraphModel><root>
       <mxCell id="0"/><mxCell id="1" parent="0"/>{cells}
     </root></mxGraphModel></diagram></mxfile>"""
+
+
+def schema_version() -> str:
+    readme = convert_ifml.README.read_text(encoding="utf-8")
+    match = convert_ifml.VERSION_RE.search(readme)
+    if not match:
+        raise AssertionError("README usage example is missing its schema version")
+    major, minor, patch = (int(part) for part in match.group(1).split("."))
+    return f"{major}.{minor}.{patch + 1}-SNAPSHOT"
 
 
 class ConvertIfmlTests(unittest.TestCase):
@@ -49,7 +59,9 @@ class ConvertIfmlTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             output, omissions = convert_ifml.convert(path)
 
-        self.assertIn("refs/tags/0.2.0/buildingblocks_schema.json", output)
+        schema = json.loads(convert_ifml.SCHEMA.read_text(encoding="utf-8"))
+        self.assertIn(schema["$id"], output)
+        self.assertIn(f'buildingblocks: "{schema_version()}"', output)
         self.assertNotIn('type: "Window"', output)
         self.assertIn('- name: "Homepage"', output)
         self.assertIn('type: "Alert Dialog"', output)
@@ -190,11 +202,10 @@ class ConvertIfmlTests(unittest.TestCase):
             output = output_path.read_text(encoding="utf-8")
 
         self.assertEqual(result.stdout, "")
+        schema = json.loads(convert_ifml.SCHEMA.read_text(encoding="utf-8"))
         self.assertEqual(output, (
-            "# yaml-language-server: $schema=https://raw.githubusercontent.com/"
-            "experimental-software/building-blocks-specification/refs/tags/"
-            "0.2.0/buildingblocks_schema.json\n"
-            'buildingblocks: "0.2.0"\n'
+            f"# yaml-language-server: $schema={schema['$id']}\n"
+            f'buildingblocks: "{schema_version()}"\n'
             'info:\n  title: "Diagram"\n'
             'components: []\n'
             'actions:\n  - name: "Send"\n'
