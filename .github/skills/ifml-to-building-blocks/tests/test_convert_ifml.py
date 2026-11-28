@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 import urllib.parse
 import zlib
 
@@ -21,16 +22,66 @@ def diagram(cells: str) -> str:
     </root></mxGraphModel></diagram></mxfile>"""
 
 
-def schema_version() -> str:
-    readme = convert_ifml.README.read_text(encoding="utf-8")
-    match = convert_ifml.VERSION_RE.search(readme)
-    if not match:
-        raise AssertionError("README usage example is missing its schema version")
-    major, minor, patch = (int(part) for part in match.group(1).split("."))
-    return f"{major}.{minor}.{patch + 1}-SNAPSHOT"
-
-
 class ConvertIfmlTests(unittest.TestCase):
+    def test_schema_version_and_directive_follow_schema_id(self):
+        tagged_url = "https://example.com/refs/tags/1.2.3/buildingblocks_schema.json"
+        snapshot_url = "https://example.com/refs/heads/main/buildingblocks_schema.json"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            schema = root / "buildingblocks_schema.json"
+            readme = root / "README.md"
+            source = root / "diagram.drawio"
+            source.write_text(diagram(""), encoding="utf-8")
+            with patch.object(convert_ifml, "SCHEMA", schema), patch.object(
+                convert_ifml, "README", readme
+            ):
+                schema.write_text(json.dumps({"$id": tagged_url}), encoding="utf-8")
+                output, _ = convert_ifml.convert(source)
+                self.assertTrue(output.startswith(
+                    f'# yaml-language-server: $schema={tagged_url}\nbuildingblocks: "1.2.3"\n'
+                ))
+
+                schema.write_text(json.dumps({"$id": snapshot_url}), encoding="utf-8")
+                for value in ('2.4.9', '"2.4.9"', "'2.4.9'"):
+                    with self.subTest(value=value):
+                        readme.write_text(
+                            'buildingblocks: 8.8.8\n'
+                            '## Usage\n\n```yaml\n'
+                            '# yaml-language-server: $schema=https://example.com/refs/tags/9.9.9/schema.json\n'
+                            f'buildingblocks: {value}\n'
+                            '```\n\n```yml\nbuildingblocks: 5.6.7\n```\n',
+                            encoding="utf-8",
+                        )
+                        output, _ = convert_ifml.convert(source)
+                        self.assertTrue(output.startswith(
+                            f'# yaml-language-server: $schema={snapshot_url}\nbuildingblocks: "2.4.10-SNAPSHOT"\n'
+                        ))
+
+    def test_invalid_tag_and_missing_readme_version_are_errors(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            schema = root / "schema.json"
+            readme = root / "README.md"
+            readme.write_text("No usage example\n", encoding="utf-8")
+            with patch.object(convert_ifml, "SCHEMA", schema), patch.object(
+                convert_ifml, "README", readme
+            ):
+                schema.write_text(json.dumps({
+                    "$id": "https://example.com/refs/tags/not-a-version/schema.json"
+                }), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "valid version tag"):
+                    convert_ifml._read_schema_info()
+                schema.write_text(json.dumps({
+                    "$id": "https://example.com/refs/heads/main/schema.json"
+                }), encoding="utf-8")
+                readme.write_text(
+                    "## Usage\n```yaml\ninfo: {}\n```\n"
+                    "```yaml\nbuildingblocks: 1.2.3\n```\n",
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(ValueError, "README usage example"):
+                    convert_ifml._read_schema_info()
+
     def test_maps_view_containers_and_components(self):
         source = diagram("""
           <mxCell id="10" parent="1" vertex="1" value=""
@@ -61,7 +112,7 @@ class ConvertIfmlTests(unittest.TestCase):
 
         schema = json.loads(convert_ifml.SCHEMA.read_text(encoding="utf-8"))
         self.assertIn(schema["$id"], output)
-        self.assertIn(f'buildingblocks: "{schema_version()}"', output)
+        self.assertIn(f'buildingblocks: "{convert_ifml._read_schema_info()[0]}"', output)
         self.assertNotIn('type: "Window"', output)
         self.assertIn('- name: "Homepage"', output)
         self.assertIn('type: "Alert Dialog"', output)
@@ -205,7 +256,7 @@ class ConvertIfmlTests(unittest.TestCase):
         schema = json.loads(convert_ifml.SCHEMA.read_text(encoding="utf-8"))
         self.assertEqual(output, (
             f"# yaml-language-server: $schema={schema['$id']}\n"
-            f'buildingblocks: "{schema_version()}"\n'
+            f'buildingblocks: "{convert_ifml._read_schema_info()[0]}"\n'
             'info:\n  title: "Diagram"\n'
             'components: []\n'
             'actions:\n  - name: "Send"\n'
