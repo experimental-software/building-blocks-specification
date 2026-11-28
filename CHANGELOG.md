@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file. The format is b
 - Minor version: Gets incremented with each breaking change.
 - Patch version: Gets incremented with each non-breaking structural change.
 
+## [Unreleased]
+
+### Fixed
+
+- Allow components without a type to validate without type-specific constraints.
+
 ## [0.2.1] - 2026-11-28
 
 ### Added
