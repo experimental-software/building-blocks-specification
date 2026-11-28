@@ -8,7 +8,7 @@ All notable changes to this project are documented in this file. The format is b
 - Minor version: Gets incremented with each breaking change.
 - Patch version: Gets incremented with each non-breaking structural change.
 
-## [Unreleased]
+## [0.2.2] - 2026-11-28
 
 ### Fixed
 
