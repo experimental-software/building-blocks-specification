@@ -1,0 +1,487 @@
+#!/usr/bin/env python3
+"""Convert supported IFML elements in a draw.io diagram to Building Blocks YAML."""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import html
+from html.parser import HTMLParser
+import json
+import re
+import sys
+import urllib.parse
+import xml.etree.ElementTree as ET
+import zlib
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Iterable
+
+
+ROOT = Path(__file__).resolve().parents[4]
+README = ROOT / "README.md"
+VERSION_RE = re.compile(
+    r"yaml-language-server:\s*\$schema=https://raw\.githubusercontent\.com/"
+    r"experimental-software/building-blocks-specification/refs/tags/"
+    r"(\d+\.\d+\.\d+)/buildingblocks_schema\.json"
+)
+STEREOTYPE_RE = re.compile(r"«([^»]+)»")
+REQUIRED_PROPERTY_TYPES = {"SplitButton"}
+LEAF_COMPONENT_TYPES = {"Text", "Input", "Button", "SplitButton"}
+COMPONENT_PART_STEREOTYPES = {
+    "ActivationExpression",
+    "DataBinding",
+    "DynamicBehavior",
+    "InputParameter",
+    "ParamBindingGroup",
+}
+
+
+@dataclass
+class Component:
+    cell_id: str
+    type: str
+    name: str
+    parent_container_id: str | None
+    is_container: bool = False
+    children: list[Component] = field(default_factory=list)
+
+    def as_mapping(self) -> dict:
+        result = {"type": self.type, "name": self.name}
+        if self.children:
+            result["children"] = [child.as_mapping() for child in self.children]
+        return result
+
+
+class _TextExtractor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"br", "div", "p", "li"}:
+            self.parts.append(" ")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"div", "p", "li"}:
+            self.parts.append(" ")
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data)
+
+
+def _local_name(element: ET.Element) -> str:
+    return element.tag.rsplit("}", 1)[-1]
+
+
+def _parse_compressed_diagram(diagram: ET.Element) -> ET.Element:
+    encoded = "".join(diagram.itertext()).strip()
+    raw = base64.b64decode(encoded)
+    try:
+        decoded = zlib.decompress(raw, -zlib.MAX_WBITS)
+    except zlib.error:
+        decoded = zlib.decompress(raw)
+    return ET.fromstring(urllib.parse.unquote(decoded.decode("utf-8")))
+
+
+def _graph_models(root: ET.Element) -> list[ET.Element]:
+    if _local_name(root) == "mxGraphModel":
+        return [root]
+    models: list[ET.Element] = []
+    for child in root.iter():
+        if _local_name(child) == "mxGraphModel":
+            models.append(child)
+        elif _local_name(child) == "diagram" and not any(
+            _local_name(nested) == "mxGraphModel" for nested in child
+        ):
+            models.append(_parse_compressed_diagram(child))
+    if not models:
+        raise ValueError("No mxGraphModel was found in the .drawio file.")
+    return models
+
+
+def _decode_xml(path: Path) -> list[ET.Element]:
+    try:
+        root = ET.parse(path).getroot()
+    except (ET.ParseError, OSError) as exc:
+        raise ValueError(f"Could not read draw.io XML: {exc}") from exc
+    return _graph_models(root)
+
+
+def _style(cell: ET.Element) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for token in cell.get("style", "").split(";"):
+        if "=" in token:
+            key, value = token.split("=", 1)
+            values[key] = value
+        elif token:
+            values[token] = "1"
+    return values
+
+
+def _plain_text(value: str) -> str:
+    decoded = value
+    for _ in range(3):
+        unescaped = html.unescape(decoded)
+        if unescaped == decoded:
+            break
+        decoded = unescaped
+    extractor = _TextExtractor()
+    extractor.feed(decoded)
+    return " ".join("".join(extractor.parts).replace("\xa0", " ").split())
+
+
+def _label(value: str) -> tuple[str | None, str]:
+    text = _plain_text(value)
+    match = STEREOTYPE_RE.search(text)
+    if not match:
+        return None, text.strip()
+    name = (text[: match.start()] + " " + text[match.end() :]).strip()
+    return match.group(1).strip(), " ".join(name.split())
+
+
+def _read_version() -> tuple[str, str]:
+    try:
+        readme = README.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ValueError(f"Could not read the repository README: {exc}") from exc
+    match = VERSION_RE.search(readme)
+    if not match:
+        raise ValueError("Could not find the published schema version in the README usage example.")
+    version = match.group(1)
+    schema_url = (
+        "https://raw.githubusercontent.com/experimental-software/"
+        f"building-blocks-specification/refs/tags/{version}/buildingblocks_schema.json"
+    )
+    return version, schema_url
+
+
+def _is_container(cell: ET.Element, children: dict[str, list[ET.Element]]) -> bool:
+    if _style(cell).get("childLayout") != "stackLayout":
+        return False
+    child_cells = children.get(cell.get("id", ""), [])
+    return any("swimlane" in _style(child) for child in child_cells)
+
+
+def _header_and_body(
+    cell: ET.Element, children: dict[str, list[ET.Element]]
+) -> tuple[ET.Element | None, ET.Element | None]:
+    header = None
+    body = None
+    for child in children.get(cell.get("id", ""), []):
+        style = _style(child)
+        if "swimlane" in style:
+            body = child
+        elif style.get("shape") != "component" and child.get("value", "").strip():
+            if header is None:
+                header = child
+    return header, body
+
+
+def _diagram_cells(model: ET.Element) -> tuple[list[ET.Element], dict[str, list[ET.Element]]]:
+    cells = [element for element in model.iter() if _local_name(element) == "mxCell"]
+    children: dict[str, list[ET.Element]] = {}
+    for cell in cells:
+        children.setdefault(cell.get("parent", ""), []).append(cell)
+    return cells, children
+
+
+def _report(cell_id: str, label: str, reason: str) -> dict[str, str]:
+    return {"cell": cell_id or "(no id)", "label": label or "(empty label)", "reason": reason}
+
+
+def _nearest_container(
+    parent_id: str,
+    body_to_container: dict[str, str],
+    cells_by_id: dict[str, ET.Element],
+    known_container_ids: set[str],
+) -> str | None:
+    current = parent_id
+    while current and current not in {"0", "1"}:
+        if current in body_to_container and body_to_container[current] in known_container_ids:
+            return body_to_container[current]
+        parent = cells_by_id.get(current)
+        if parent is None:
+            break
+        current = parent.get("parent", "")
+    return None
+
+
+def _position(cell: ET.Element) -> tuple[float, float]:
+    geometry = next(
+        (child for child in cell if _local_name(child) == "mxGeometry"),
+        None,
+    )
+    if geometry is None:
+        return (0.0, 0.0)
+    try:
+        y = float(geometry.get("y", "0"))
+        x = float(geometry.get("x", "0"))
+    except ValueError:
+        return (0.0, 0.0)
+    return (y, x)
+
+
+def _map_container_type(stereotype: str | None, is_module: bool) -> str | None:
+    if is_module:
+        return "Module"
+    if stereotype in {None, "", "Window", "View Container"}:
+        return "Window"
+    if stereotype in {"Modal", "Alert Dialog"}:
+        return "Alert Dialog"
+    return stereotype
+
+
+def _convert_model(model: ET.Element) -> tuple[list[Component], list[dict[str, str]], list[dict[str, str]]]:
+    cells, children = _diagram_cells(model)
+    cells_by_id = {cell.get("id", ""): cell for cell in cells}
+    components_by_id: dict[str, Component] = {}
+    actions: list[dict[str, str]] = []
+    omissions: list[dict[str, str]] = []
+    body_to_container: dict[str, str] = {}
+    consumed: set[str] = set()
+
+    for cell in cells:
+        cell_id = cell.get("id", "")
+        if not _is_container(cell, children):
+            continue
+        header, body = _header_and_body(cell, children)
+        if header is None or body is None:
+            omissions.append(_report(cell_id, _plain_text(cell.get("value", "")),
+                                     "View container title or body could not be inferred."))
+            consumed.add(cell_id)
+            continue
+        stereotype, name = _label(header.get("value", ""))
+        cell_style = _style(cell)
+        is_module = cell_style.get("fillColor", "").lower() == "#f5f5f5"
+        component_type = _map_container_type(stereotype, is_module)
+        if not name or not component_type:
+            omissions.append(_report(cell_id, _plain_text(header.get("value", "")),
+                                     "View container requires an inferable type and non-empty name."))
+            consumed.update({cell_id, header.get("id", ""), body.get("id", "")})
+            continue
+        component = Component(
+            cell_id=cell_id,
+            type=component_type,
+            name=name,
+            parent_container_id=None,
+            is_container=True,
+        )
+        components_by_id[cell_id] = component
+        body_to_container[body.get("id", "")] = cell_id
+        consumed.update({cell_id, header.get("id", ""), body.get("id", "")})
+        for candidate in children.get(header.get("id", ""), []):
+            if _style(candidate).get("shape") == "component":
+                consumed.add(candidate.get("id", ""))
+
+    container_ids = set(components_by_id)
+    for cell_id, component in components_by_id.items():
+        if component.is_container:
+            component.parent_container_id = _nearest_container(
+                cells_by_id[cell_id].get("parent", ""),
+                body_to_container,
+                cells_by_id,
+                container_ids,
+            )
+
+    for cell in cells:
+        cell_id = cell.get("id", "")
+        if cell_id in consumed or cell_id in {"0", "1"}:
+            continue
+        if cell.get("edge") == "1":
+            attached_labels = [
+                _plain_text(child.get("value", ""))
+                for child in children.get(cell_id, [])
+                if _style(child).get("edgeLabel") == "1"
+            ]
+            label = _plain_text(cell.get("value", ""))
+            if attached_labels:
+                label = " ".join(filter(None, [label, *attached_labels]))
+            omissions.append(_report(
+                cell_id,
+                label,
+                "IFML flow/relationship is not represented by the Building Block schema.",
+            ))
+            consumed.update(child.get("id", "") for child in children.get(cell_id, []))
+            continue
+
+        style = _style(cell)
+        shape = style.get("shape", "text" if "text" in style else "")
+        value = cell.get("value", "")
+        text = _plain_text(value)
+        stereotype, name = _label(value)
+        if shape == "component" or "swimlane" in style or style.get("edgeLabel") == "1":
+            consumed.add(cell_id)
+            continue
+        if shape == "hexagon":
+            if text:
+                actions.append({"name": text})
+            else:
+                omissions.append(_report(cell_id, text, "Action name is missing."))
+            continue
+        if shape in {"note"}:
+            omissions.append(_report(cell_id, text, "IFML annotation is not represented by the Building Block schema."))
+            continue
+        if shape == "parallelogram":
+            omissions.append(_report(cell_id, text, "Parameter binding is not represented by the Building Block schema."))
+            continue
+        if shape == "mxgraph.bpmn.event":
+            omissions.append(_report(cell_id, text, "IFML event is not represented by the Building Block schema."))
+            continue
+
+        component_type: str | None = None
+        if shape == "mxgraph.bpmn.task2":
+            component_type = stereotype
+            if component_type in REQUIRED_PROPERTY_TYPES:
+                omissions.append(_report(
+                    cell_id, text,
+                    f"{component_type} requires schema properties that cannot be inferred from this diagram.",
+                ))
+                continue
+        elif shape in {"text", ""}:
+            if stereotype:
+                if stereotype in COMPONENT_PART_STEREOTYPES:
+                    omissions.append(_report(
+                        cell_id, text,
+                        "IFML component part has no schema mapping.",
+                    ))
+                    continue
+                component_type = stereotype
+                if component_type in REQUIRED_PROPERTY_TYPES:
+                    omissions.append(_report(
+                        cell_id, text,
+                        f"{component_type} requires schema properties that cannot be inferred from this diagram.",
+                    ))
+                    continue
+            elif shape == "text" and text:
+                component_type, name = "Text", text
+            elif stereotype is None and text:
+                omissions.append(_report(cell_id, text, "IFML component part or label has no schema mapping."))
+                continue
+        elif shape:
+            omissions.append(_report(cell_id, text, f"Unsupported IFML shape '{shape}'."))
+            continue
+
+        if component_type is None or not name:
+            omissions.append(_report(
+                cell_id, text,
+                "Component type or non-empty name could not be inferred.",
+            ))
+            continue
+        parent_container_id = _nearest_container(
+            cell.get("parent", ""), body_to_container, cells_by_id, container_ids
+        )
+        components_by_id[cell_id] = Component(
+            cell_id=cell_id,
+            type=component_type,
+            name=name,
+            parent_container_id=parent_container_id,
+        )
+
+    for component in components_by_id.values():
+        if component.is_container and component.type in LEAF_COMPONENT_TYPES:
+            nested = [
+                child for child in components_by_id.values()
+                if child.parent_container_id == component.cell_id
+            ]
+            if nested:
+                omissions.append(_report(
+                    component.cell_id,
+                    component.name,
+                    f"Schema component type '{component.type}' cannot contain child components; "
+                    "nested elements were promoted to the enclosing container.",
+                ))
+                for child in nested:
+                    child.parent_container_id = component.parent_container_id
+
+    for component in components_by_id.values():
+        if component.parent_container_id:
+            components_by_id[component.parent_container_id].children.append(component)
+
+    for component in components_by_id.values():
+        component.children.sort(key=lambda child: _position(cells_by_id[child.cell_id]))
+    top_level = [
+        component for component in components_by_id.values()
+        if component.parent_container_id is None
+    ]
+    top_level.sort(key=lambda component: _position(cells_by_id[component.cell_id]))
+    return top_level, actions, omissions
+
+
+def _yaml_scalar(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _emit_yaml(document: dict) -> str:
+    lines = [
+        f"# yaml-language-server: $schema={document['schema']}",
+        f"buildingblocks: {_yaml_scalar(document['version'])}",
+        "info:",
+        f"  title: {_yaml_scalar(document['title'])}",
+        "components:",
+    ]
+
+    def emit_component(component: dict, indent: int) -> None:
+        lines.append(" " * indent + f"- type: {_yaml_scalar(component['type'])}")
+        lines.append(" " * (indent + 2) + f"name: {_yaml_scalar(component['name'])}")
+        if component.get("children"):
+            lines.append(" " * (indent + 2) + "children:")
+            for child in component["children"]:
+                emit_component(child, indent + 4)
+
+    for component in document["components"]:
+        emit_component(component, 2)
+    if document["actions"]:
+        lines.append("actions:")
+        for action in document["actions"]:
+            lines.append(f"  - name: {_yaml_scalar(action['name'])}")
+    return "\n".join(lines) + "\n"
+
+
+def convert(path: Path) -> tuple[str, list[dict[str, str]]]:
+    version, schema_url = _read_version()
+    models = _decode_xml(path)
+    components: list[Component] = []
+    actions: list[dict[str, str]] = []
+    omissions: list[dict[str, str]] = []
+    for model in models:
+        model_components, model_actions, model_omissions = _convert_model(model)
+        components.extend(model_components)
+        actions.extend(model_actions)
+        omissions.extend(model_omissions)
+    title = next(
+        (component.name for component in components if component.is_container),
+        path.stem.replace("-", " ").replace("_", " ").title(),
+    )
+    yaml = _emit_yaml({
+        "schema": schema_url,
+        "version": version,
+        "title": title,
+        "components": [component.as_mapping() for component in components],
+        "actions": actions,
+    })
+    return yaml, omissions
+
+
+def main(argv: Iterable[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("diagram", type=Path, help="path to a .drawio file")
+    args = parser.parse_args(argv)
+    try:
+        yaml, omissions = convert(args.diagram)
+    except (ValueError, ET.ParseError, OSError, zlib.error) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+    sys.stdout.write(yaml)
+    if omissions:
+        print("\nOmissions:", file=sys.stderr)
+        for omission in omissions:
+            print(
+                f"- Cell {omission['cell']} ({omission['label']}): {omission['reason']}",
+                file=sys.stderr,
+            )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
