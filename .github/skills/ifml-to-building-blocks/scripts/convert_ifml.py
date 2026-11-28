@@ -9,6 +9,7 @@ import binascii
 import html
 from html.parser import HTMLParser
 import json
+import os
 import re
 import sys
 import urllib.parse
@@ -19,7 +20,9 @@ from pathlib import Path
 from typing import Iterable
 
 
-ROOT = Path(__file__).resolve().parents[4]
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+ROOT = Path(SCRIPT_DIR) / "../../../../"
+SCHEMA = ROOT / "buildingblocks_schema.json"
 README = ROOT / "README.md"
 VERSION_RE = re.compile(
     r"yaml-language-server:\s*\$schema=https://raw\.githubusercontent\.com/"
@@ -148,19 +151,24 @@ def _label(value: str) -> tuple[str | None, str]:
     return match.group(1).strip(), " ".join(name.split())
 
 
-def _read_version() -> tuple[str, str]:
+def _read_schema_info() -> tuple[str, str]:
+    try:
+        schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Could not read the current Building Blocks schema: {exc}") from exc
+    schema_url = schema.get("$id")
+    if not isinstance(schema_url, str) or not schema_url:
+        raise ValueError("The current Building Blocks schema has no valid $id.")
+
     try:
         readme = README.read_text(encoding="utf-8")
     except OSError as exc:
         raise ValueError(f"Could not read the repository README: {exc}") from exc
     match = VERSION_RE.search(readme)
     if not match:
-        raise ValueError("Could not find the published schema version in the README usage example.")
-    version = match.group(1)
-    schema_url = (
-        "https://raw.githubusercontent.com/experimental-software/"
-        f"building-blocks-specification/refs/tags/{version}/buildingblocks_schema.json"
-    )
+        raise ValueError("Could not find the specification version in the README usage example.")
+    major, minor, patch = (int(part) for part in match.group(1).split("."))
+    version = f"{major}.{minor}.{patch + 1}-SNAPSHOT"
     return version, schema_url
 
 
@@ -437,7 +445,7 @@ def _emit_yaml(document: dict) -> str:
 
 
 def convert(path: Path) -> tuple[str, list[dict[str, str]]]:
-    version, schema_url = _read_version()
+    version, schema_url = _read_schema_info()
     models = _decode_xml(path)
     components: list[Component] = []
     actions: list[dict[str, str]] = []

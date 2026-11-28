@@ -21,8 +21,7 @@ optional arguments:
 
 Adds the entry to the first section of CHANGELOG.md, creating "## [Unreleased]"
 if needed, then sets the schema \$id to
-"https://experimental-software.com/draft/buildingblocks_<version>-SNAPSHOT.json".
-The patch version is bumped unless the schema \$id is already a snapshot.
+"https://github.com/experimental-software/building-blocks-specification/blob/main/buildingblocks_schema.json".
 README.md is not changed. No release, tag or branch is created.
 
 dependencies:
@@ -83,30 +82,21 @@ CHANGELOG_FILE="${ROOT}/CHANGELOG.md"
 # Replaces the $id in the schema file, keeping the rest of the file untouched.
 set_schema_id() {
   local new_id=$1
-  local old_id
-  old_id=$(jq -er '."$id"' "${SCHEMA_FILE}")
-  sed -i "s|\"\\\$id\": \"${old_id}\"|\"\$id\": \"${new_id}\"|" "${SCHEMA_FILE}"
+  sed -E -i "s|(\"\\\$id\"[[:space:]]*:[[:space:]]*\")[^\"]*(\")|\1${new_id}\2|" "${SCHEMA_FILE}"
+  if [[ "$(jq -er '."$id"' "${SCHEMA_FILE}")" != "${new_id}" ]]; then
+    echo "ERROR: failed to update schema \$id in ${SCHEMA_FILE}" >&2
+    exit 1
+  fi
 }
 
-update_snapshot_version() {
+update_draft_id() {
   local id
   id=$(jq -er '."$id"' "${SCHEMA_FILE}") || {
     echo "ERROR: unable to read \$id from ${SCHEMA_FILE}" >&2
     exit 1
   }
 
-  if [[ ! "${id}" =~ ^.*buildingblocks_([0-9]+)_([0-9]+)_([0-9]+)(-SNAPSHOT)?\.json$ ]]; then
-    echo "ERROR: schema \$id has an invalid version: ${id}" >&2
-    exit 1
-  fi
-
-  local major="${BASH_REMATCH[1]}"
-  local minor="${BASH_REMATCH[2]}"
-  local patch="${BASH_REMATCH[3]}"
-  local snapshot="${BASH_REMATCH[4]}"
-  [[ -n "${snapshot}" ]] || patch=$((patch + 1))
-
-  local new_id="https://experimental-software.com/draft/buildingblocks_${major}_${minor}_${patch}-SNAPSHOT.json"
+  local new_id="https://github.com/experimental-software/building-blocks-specification/blob/main/buildingblocks_schema.json"
   if [[ "${id}" == "${new_id}" ]]; then
     echo "Schema \$id is already a draft: ${id}"
   else
@@ -185,4 +175,4 @@ add_changelog_entry() {
 # ==============================================================================
 
 add_changelog_entry
-update_snapshot_version
+update_draft_id
