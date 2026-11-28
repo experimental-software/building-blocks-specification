@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/experimental-software/building-blocks-specification/refs/tags/0.2.0/buildingblocks_schema.json",
+  "$id": "https://raw.githubusercontent.com/experimental-software/building-blocks-specification/refs/heads/main/buildingblocks_0_2_1-SNAPSHOT.json",
   "title": "Building Blocks Specification",
   "description": "Allows to describe the structure of View Elements, Events, and Actions for graphical user interfaces in YAML files. Out of scope is visual design.",
   "type": "object",
@@ -151,6 +151,63 @@
           "if": {
             "properties": {
               "type": {
+                "const": "Select"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "properties"
+            ],
+            "properties": {
+              "properties": {
+                "$ref": "#/$defs/selectProperties"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "List"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "properties"
+            ],
+            "properties": {
+              "properties": {
+                "$ref": "#/$defs/listProperties"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "RadioGroup"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "properties"
+            ],
+            "properties": {
+              "properties": {
+                "$ref": "#/$defs/radioGroupProperties"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
                 "const": "SplitButton"
               }
             }
@@ -174,6 +231,9 @@
                   "Text",
                   "Input",
                   "Button",
+                  "Select",
+                  "List",
+                  "RadioGroup",
                   "SplitButton"
                 ]
               }
@@ -510,6 +570,72 @@
         "locale": {
           "type": "string",
           "description": "Locale used to format the input value."
+        }
+      }
+    },
+    "selectProperties": {
+      "type": "object",
+      "required": [
+        "options"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Available options.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selected": {
+          "type": "string",
+          "description": "Currently selected option."
+        }
+      }
+    },
+    "listProperties": {
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Items displayed in the list.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selectedItems": {
+          "type": "array",
+          "description": "Currently selected items.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "radioGroupProperties": {
+      "type": "object",
+      "required": [
+        "options"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Available options.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selected": {
+          "type": "string",
+          "description": "Currently selected option."
         }
       }
     }

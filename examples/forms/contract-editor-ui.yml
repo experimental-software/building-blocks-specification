@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/experimental-software/building-blocks-specification/refs/heads/main/buildingblocks_schema.json
+buildingblocks: "0.2.1-SNAPSHOT"
+info:
+  title: Contact editor
+components:
+  - type: Form
+    name: Contact editor
+    description: Contact editor UI based on the NetBeans GUI Builder tutorial at https://netbeans.apache.org/tutorial/main/kb/docs/java/quickstart-gui/.
+    children:
+      - type: Group
+        name: Name
+        children:
+          - type: Input
+            name: First Name
+          - type: Input
+            name: Last Name
+          - type: Input
+            name: Title
+          - type: Input
+            name: Nickname
+          - type: Select
+            name: Display Format
+            properties:
+              options:
+                - Item 1
+              selected: Item 1
+      - type: Group
+        name: E-mail
+        children:
+          - type: Input
+            name: E-mail Address
+          - type: List
+            name: E-mail Addresses
+            properties:
+              items:
+                - Item 1
+                - Item 2
+                - Item 3
+                - Item 4
+                - Item 5
+          - type: Button
+            name: Add
+          - type: Button
+            name: Edit
+          - type: Button
+            name: Remove
+          - type: Button
+            name: As Default
+          - type: RadioGroup
+            name: Mail Format
+            properties:
+              options:
+                - HTML
+                - Plain Text
+                - Custom
+      - type: Group
+        name: Dialog actions
+        children:
+          - type: Button
+            name: OK
+          - type: Button
+            name: Cancel
