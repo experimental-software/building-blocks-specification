@@ -23,6 +23,45 @@ def diagram(cells: str) -> str:
 
 
 class ConvertIfmlTests(unittest.TestCase):
+    def test_yaml_scalars_are_plain_when_safe_and_quoted_when_ambiguous(self):
+        plain = [
+            "Homepage", "Alert Dialog", "1.2.3", "2.4.10-SNAPSHOT",
+            "https://example.com/a#fragment", "-item", "a:b", "café",
+        ]
+        quoted = [
+            "", " leading", "trailing ", "true", "No", "null", "~", "42",
+            "0xFF", "0o17", "1e3", ".NaN", "1:23", "2026-11-28",
+            "2026-11-28T11:13:46Z", "a: b", "a:", "a # comment",
+            "# comment", "- item", ":symbol", "[one, two]", "a\nb", "a\u2028b",
+            "<<", "=",
+        ]
+        for value in plain:
+            with self.subTest(value=value):
+                self.assertEqual(convert_ifml._yaml_scalar(value), value)
+        for value in quoted:
+            with self.subTest(value=value):
+                self.assertEqual(convert_ifml._yaml_scalar(value), json.dumps(value))
+        self.assertEqual(convert_ifml._yaml_scalar("👋: wave"), '"👋: wave"')
+
+    def test_yaml_emitter_quotes_ambiguous_strings_in_each_property(self):
+        output = convert_ifml._emit_yaml({
+            "schema": "https://example.com/schema.json",
+            "version": "1.2.3",
+            "title": "true",
+            "components": [{"type": "List", "name": "a: b", "children": [
+                {"name": "42"},
+            ]}],
+            "actions": [{"name": "off"}],
+        })
+        self.assertEqual(output, (
+            "# yaml-language-server: $schema=https://example.com/schema.json\n"
+            "buildingblocks: 1.2.3\n"
+            'info:\n  title: "true"\n'
+            'components:\n  - type: List\n    name: "a: b"\n'
+            '    children:\n      - name: "42"\n'
+            'actions:\n  - name: "off"\n'
+        ))
+
     def test_schema_version_and_directive_follow_schema_id(self):
         tagged_url = "https://example.com/refs/tags/1.2.3/buildingblocks_schema.json"
         snapshot_url = "https://example.com/refs/heads/main/buildingblocks_schema.json"
@@ -38,7 +77,7 @@ class ConvertIfmlTests(unittest.TestCase):
                 schema.write_text(json.dumps({"$id": tagged_url}), encoding="utf-8")
                 output, _ = convert_ifml.convert(source)
                 self.assertTrue(output.startswith(
-                    f'# yaml-language-server: $schema={tagged_url}\nbuildingblocks: "1.2.3"\n'
+                    f'# yaml-language-server: $schema={tagged_url}\nbuildingblocks: 1.2.3\n'
                 ))
 
                 schema.write_text(json.dumps({"$id": snapshot_url}), encoding="utf-8")
@@ -54,7 +93,7 @@ class ConvertIfmlTests(unittest.TestCase):
                         )
                         output, _ = convert_ifml.convert(source)
                         self.assertTrue(output.startswith(
-                            f'# yaml-language-server: $schema={snapshot_url}\nbuildingblocks: "2.4.10-SNAPSHOT"\n'
+                            f'# yaml-language-server: $schema={snapshot_url}\nbuildingblocks: 2.4.10-SNAPSHOT\n'
                         ))
 
     def test_invalid_tag_and_missing_readme_version_are_errors(self):
@@ -112,13 +151,13 @@ class ConvertIfmlTests(unittest.TestCase):
 
         schema = json.loads(convert_ifml.SCHEMA.read_text(encoding="utf-8"))
         self.assertIn(schema["$id"], output)
-        self.assertIn(f'buildingblocks: "{convert_ifml._read_schema_info()[0]}"', output)
-        self.assertNotIn('type: "Window"', output)
-        self.assertIn('- name: "Homepage"', output)
-        self.assertIn('type: "Alert Dialog"', output)
-        self.assertIn('name: "Headline"', output)
-        self.assertIn('name: "Name"', output)
-        self.assertIn('name: "Close"', output)
+        self.assertIn(f'buildingblocks: {convert_ifml._read_schema_info()[0]}', output)
+        self.assertNotIn('type: Window', output)
+        self.assertIn('- name: Homepage', output)
+        self.assertIn('type: Alert Dialog', output)
+        self.assertIn('name: Headline', output)
+        self.assertIn('name: Name', output)
+        self.assertIn('name: Close', output)
         self.assertEqual(omissions, [])
 
     def test_maps_actions_and_reports_unrepresentable_elements(self):
@@ -141,7 +180,7 @@ class ConvertIfmlTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             output, omissions = convert_ifml.convert(path)
 
-        self.assertIn('actions:\n  - name: "Send"', output)
+        self.assertIn('actions:\n  - name: Send', output)
         self.assertEqual(len(omissions), 5)
         self.assertTrue(any("component part" in item["reason"] for item in omissions))
         self.assertTrue(any("annotation" in item["reason"] for item in omissions))
@@ -163,9 +202,9 @@ class ConvertIfmlTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             output, omissions = convert_ifml.convert(path)
 
-        self.assertIn('components:\n  - name: "Unknown"\n', output)
+        self.assertIn('components:\n  - name: Unknown\n', output)
         self.assertNotIn("Choose", output)
-        self.assertNotIn('"Button"', output)
+        self.assertNotIn('Button', output)
         self.assertEqual(len(omissions), 2)
         self.assertTrue(any("schema properties" in item["reason"] for item in omissions))
         self.assertTrue(any("name could not be inferred" in item["reason"] for item in omissions))
@@ -186,12 +225,12 @@ class ConvertIfmlTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             output, omissions = convert_ifml.convert(path)
 
-        self.assertNotIn('type: "Module"', output)
-        self.assertIn('- name: "PreferenceSetter"', output)
-        self.assertNotIn('type: "Text"', output)
-        self.assertIn('- name: "Text"', output)
-        self.assertIn('type: "List"', output)
-        self.assertIn('name: "MessageList"', output)
+        self.assertNotIn('type: Module', output)
+        self.assertIn('- name: PreferenceSetter', output)
+        self.assertNotIn('type: Text', output)
+        self.assertIn('- name: Text', output)
+        self.assertIn('type: List', output)
+        self.assertIn('name: MessageList', output)
         self.assertEqual(omissions, [])
 
     def test_preserves_explicit_container_stereotypes(self):
@@ -215,10 +254,10 @@ class ConvertIfmlTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             output, omissions = convert_ifml.convert(path)
 
-        self.assertIn('type: "Modal"\n    name: "Inventory item dialog"', output)
-        self.assertIn('type: "View Container"\n    name: "Settings"', output)
+        self.assertIn('type: Modal\n    name: Inventory item dialog', output)
+        self.assertIn('type: View Container\n    name: Settings', output)
         self.assertNotIn("type:", output.split("Settings")[1])
-        self.assertNotIn('type: "Alert Dialog"', output)
+        self.assertNotIn('type: Alert Dialog', output)
         self.assertEqual(omissions, [])
 
     def test_reads_compressed_drawio_pages(self):
@@ -231,7 +270,7 @@ class ConvertIfmlTests(unittest.TestCase):
             path.write_text(source, encoding="utf-8")
             output, omissions = convert_ifml.convert(path)
 
-        self.assertIn('name: "Do it"', output)
+        self.assertIn('name: Do it', output)
         self.assertEqual(omissions, [])
 
     def test_cli_writes_complete_yaml_to_file_and_keeps_omissions_on_stderr(self):
@@ -256,10 +295,10 @@ class ConvertIfmlTests(unittest.TestCase):
         schema = json.loads(convert_ifml.SCHEMA.read_text(encoding="utf-8"))
         self.assertEqual(output, (
             f"# yaml-language-server: $schema={schema['$id']}\n"
-            f'buildingblocks: "{convert_ifml._read_schema_info()[0]}"\n'
-            'info:\n  title: "Diagram"\n'
+            f'buildingblocks: {convert_ifml._read_schema_info()[0]}\n'
+            'info:\n  title: Diagram\n'
             'components: []\n'
-            'actions:\n  - name: "Send"\n'
+            'actions:\n  - name: Send\n'
         ))
         self.assertIn("Omissions:", result.stderr)
         self.assertIn("Flow", result.stderr)

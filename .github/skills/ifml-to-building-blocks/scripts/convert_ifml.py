@@ -42,6 +42,20 @@ COMPONENT_PART_STEREOTYPES = {
     "InputParameter",
     "ParamBindingGroup",
 }
+YAML_NUMBER_RE = re.compile(
+    r"""^[+-]?(?:
+        0[bB][01_]+ | 0[oO][0-7_]+ | 0[xX][0-9a-fA-F_]+ |
+        [0-9][0-9_]*(?::[0-5]?[0-9])+ (?:\.[0-9_]*)? |
+        (?:[0-9][0-9_]*(?:\.[0-9_]*)?|\.[0-9][0-9_]*)
+        (?:[eE][+-]?[0-9]+)? |
+        \.(?:inf|nan)
+    )$""",
+    re.IGNORECASE | re.VERBOSE,
+)
+YAML_TIMESTAMP_RE = re.compile(r"^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:$|[Tt \t])")
+YAML_RESERVED_VALUES = {
+    "null", "~", "true", "false", "yes", "no", "on", "off", "y", "n", "<<", "=",
+}
 
 
 @dataclass
@@ -427,7 +441,25 @@ def _convert_model(model: ET.Element) -> tuple[list[Component], list[dict[str, s
 
 
 def _yaml_scalar(value: str) -> str:
-    return json.dumps(value, ensure_ascii=False)
+    if (
+        value
+        and value == value.strip()
+        and all(char.isprintable() for char in value)
+        and value[0] not in "[]{}#,&*!|>'\"%@`:"
+        and not re.match(r"^[-?](?:\s|$)", value)
+        and not re.search(r":(?:\s|$)|\s#", value)
+        and value.lower() not in YAML_RESERVED_VALUES
+        and not YAML_NUMBER_RE.fullmatch(value)
+        and not YAML_TIMESTAMP_RE.match(value)
+    ):
+        return value
+    encoded = json.dumps(value, ensure_ascii=False)
+    return "".join(
+        char if char.isprintable()
+        else f"\\u{ord(char):04x}" if ord(char) <= 0xFFFF
+        else f"\\U{ord(char):08x}"
+        for char in encoded
+    )
 
 
 def _emit_yaml(document: dict) -> str:
